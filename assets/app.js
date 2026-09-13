@@ -932,9 +932,9 @@ reg({ id:"share", cat:"Edit", name:"Share PDF", na:"Sharing links needs a server
 const LANGS=["Spanish","French","German","Italian","Portuguese","Dutch","Hindi","Chinese (Simplified)","Japanese","Korean","Arabic","Russian","Turkish","Polish","Vietnamese","English"];
 function aiTool(cfg){
   reg({ id:cfg.id, cat:"AI", name:cfg.name, desc:cfg.desc, build(root){
-    root.innerHTML=`<h2>${cfg.name}</h2><p class="lede">${cfg.lede} The document's text is sent to Claude to answer; nothing is stored.</p>
+    root.innerHTML=`<h2>${cfg.name}</h2><p class="lede">${cfg.lede} The document's text is sent to a third-party AI service to answer; nothing is stored.</p>
       <div data-drop></div>
-      <div class="options"><div class="field"><label>Anthropic API key</label><input type="password" data-key placeholder="sk-ant-… (leave blank if this page is running inside Claude)" autocomplete="off" style="max-width:460px"><span class="hint">Needed when the site is hosted on your own address. Kept only in this tab's memory. Get one at console.anthropic.com.</span></div>
+      <div class="options"><div class="field"><label>AI service API key</label><input type="password" data-key placeholder="Paste your API key" autocomplete="off" style="max-width:460px"><span class="hint">Needed when the site is hosted on your own address. Kept only in this tab's memory. Get one at console.anthropic.com.</span></div>
         ${cfg.id==="translate"?`<div class="field"><label>Translate into</label><select data-lang>${LANGS.map(l=>`<option>${l}</option>`).join("")}</select></div>`:""}
         ${cfg.id==="questions"?`<div class="row"><div class="field"><label>Number of questions</label><input type="number" data-count value="10" min="1" max="30"></div><div class="field"><label>Type</label><select data-qtype><option value="mixed">Mixed</option><option value="mcq">Multiple choice</option><option value="short">Short answer</option><option value="tf">True or false</option></select></div></div>`:""}
       </div>
@@ -960,7 +960,7 @@ function aiTool(cfg){
         if(!res.ok||data.error) throw new Error(data.error?.message||`Request failed (${res.status})`);
         const answer=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n").trim()||"(No answer returned.)"; wait.remove(); bubble("ai",answer); ai.last=answer; q("[data-dl]").hidden=false;
         if(cfg.chat!==false){ ai.history.push({role:"user",content:question},{role:"assistant",content:answer}); if(ai.history.length>16) ai.history=ai.history.slice(-16); }
-      }catch(e){ wait.remove(); let m=e.message; if(/api key|authentication|401/i.test(m)&&!key) m="Enter your Anthropic API key above to use this on a hosted site."; bubble("ai","Couldn't get an answer: "+m,"wait"); }
+      }catch(e){ wait.remove(); let m=e.message; if(/api key|authentication|401/i.test(m)&&!key) m="Enter your AI service API key above to use this tool."; bubble("ai","Couldn't get an answer: "+m,"wait"); }
       send.disabled=false; }
     if(q("[data-send]")){ q("[data-send]").onclick=()=>{ const v=q("[data-q]").value; q("[data-q]").value=""; ask(v); }; q("[data-q]").addEventListener("keydown",e=>{ if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); q("[data-send]").click(); } }); }
     if(q("[data-go]")) q("[data-go]").onclick=()=>ask(cfg.prompt(root),4000);
@@ -1077,7 +1077,7 @@ reg({ id:"about", cat:"About", name:"About", desc:"What Loomsheet provides.", bu
     <div class="options">${list}</div>
     <h2 style="margin-top:28px">How it works</h2>
     <p class="lede">Everything here is plain client-side JavaScript. Heavier libraries (OCR, Office file conversion) only load the moment a tool actually needs them, so the home page stays fast. Anything you build device-side — favorites, recent tools, remembered settings, a saved signature — is stored only in this browser and never sent anywhere.</p>
-    <p class="lede">The one exception is the AI tools: to summarize, translate, or answer questions about a document, its text is sent to Claude, which requires your own Anthropic API key. Everything else works completely offline once the page has loaded.</p>
+    <p class="lede">The one exception is the AI tools: to summarize, translate, or answer questions about a document, its text is sent to a third-party AI service, using your own API key. Everything else works completely offline once the page has loaded.</p>
     <p class="lede">Loomsheet can also be installed like an app — look for "Install" or "Add to Home Screen" in your browser's menu.</p>`;
 }});
 

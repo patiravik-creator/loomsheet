@@ -27,7 +27,7 @@ Everything is static: one `index.html`, one stylesheet, one script. PDF work is 
 [mammoth](https://github.com/mwilliamson/mammoth.js), [SheetJS](https://sheetjs.com/) and [Tesseract.js](https://tesseract.projectnaptha.com/),
 all loaded from cdnjs. No build step; the static site needs no backend at all.
 
-The AI tools call the Anthropic API directly from the browser. On a hosted site each visitor enters their own API key (kept in memory only). To let visitors use it without a key, put a small proxy in front of the API that holds your key server-side — never embed a key in this repo.
+The AI tools call a third-party AI API directly from the browser. Each visitor enters their own API key (kept in memory only). To let visitors use it without a key, put a small proxy in front of the API that holds your key server-side — never embed a key in this repo.
 
 ## Run locally
 
