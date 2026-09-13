@@ -478,6 +478,7 @@ window.renderToolIntro = function (t) {
   const lock = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
   return `<section class="tool-info tool-intro" data-tool-info="${esc(t.id)}">
   <p class="ti-badge">${lock}<b>Runs on your device.</b> Your file is never uploaded \u2014 it's processed in this tab and gone when you close it.</p>
+  <button class="ti-toggle" type="button" aria-expanded="false"><span>About ${esc(t.name)} &amp; how it works</span><i class="chev"></i></button>
   <div class="ti-grid">
     <div class="ti-about"><h3>About ${esc(t.name)}</h3><p>${esc(c.intro)}</p></div>
     <div class="ti-steps"><h3>How it works</h3><ol>${c.steps.map((s, i) => `<li><span>${i + 1}</span>${esc(s)}</li>`).join("")}</ol></div>

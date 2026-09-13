@@ -278,7 +278,7 @@ function showTool(id){
   if(!usable(t)){ $("#home").setAttribute("data-active",""); window.scrollTo(0,0); document.title="Loomsheet — every PDF tool, right in your browser"; $('link[rel=canonical]')?.setAttribute("href", ROOT); return; }
   let sec = $("#tool-"+id);
   if(!sec){
-    sec = el("section",{class:"tool",id:"tool-"+id},`<div class="crumbs"><a href="${ROOT}">All tools</a> / ${t.cat} / ${t.name}<button class="btn quiet share-btn fav-btn" data-favtool="${id}" ${isFav(id)?"data-on":""}>${isFav(id)?"★ Favorited":"☆ Favorite"}</button><button class="btn quiet share-btn" data-share>Share</button></div><div class="sheet" data-cc style="--cc:${CAT_COLOR[t.cat]}"></div>`);
+    sec = el("section",{class:"tool",id:"tool-"+id},`<div class="crumbs"><a href="${ROOT}">All tools</a> / <a href="${ROOT}" data-cat-crumb="${esc(t.cat)}">${esc(t.cat)}</a> / <span class="crumb-current">${esc(t.name)}</span><span class="crumb-actions"><button class="btn quiet share-btn fav-btn" data-favtool="${id}" ${isFav(id)?"data-on":""}>${isFav(id)?"★ Favorited":"☆ Favorite"}</button><button class="btn quiet share-btn" data-share>Share</button></span></div><div class="sheet" data-cc style="--cc:${CAT_COLOR[t.cat]}"></div>`);
     $("[data-share]",sec).onclick=()=>shareTool(t); $("[data-favtool]",sec).onclick=()=>toggleFav(id);
     $("#tools").appendChild(sec); const sh=$(".sheet",sec); t.build(sh, t);
     const h2=$("h2",sh); if(h2){ const head=el("div",{class:"tool-head"},icon(t)); h2.replaceWith(head); head.appendChild(h2); }
@@ -296,7 +296,7 @@ function buildHome(filter=""){
   for(const [label,cats] of MEGA){
     const groups=cats.map(c=>({cat:c,tools:TOOLS.filter(t=>t.cat===c && usable(t))})).filter(g=>g.tools.length); if(!groups.length) continue;
     const n=groups.reduce((a,g)=>a+g.tools.length,0), color=CAT_COLOR[cats[0]];
-    const row=el("div",{class:"mega-cat"},`<button class="mega-head" type="button" aria-expanded="false"><i class="dot" style="background:${color}"></i><span>${esc(label)}</span><span class="count">${n}</span><i class="chev"></i></button>
+    const row=el("div",{class:"mega-cat","data-cats":cats.join("|")},`<button class="mega-head" type="button" aria-expanded="false"><i class="dot" style="background:${color}"></i><span>${esc(label)}</span><span class="count">${n}</span><i class="chev"></i></button>
       <div class="mega-panel" hidden>${groups.map(g=>`<div class="mega-group">${groups.length>1?`<h4>${esc(g.cat)}</h4>`:""}${g.tools.map(t=>`<a href="${toolUrl(t)}">${icon(t)}${esc(t.name)}</a>`).join("")}</div>`).join("")}</div>`);
     $(".mega-head",row).onclick=()=>{ const open=row.hasAttribute("data-open"); $$(".mega-cat[data-open]",m).forEach(r=>{ r.removeAttribute("data-open"); $(".mega-panel",r).hidden=true; $(".mega-head",r).setAttribute("aria-expanded","false"); }); if(!open){ row.setAttribute("data-open",""); $(".mega-panel",row).hidden=false; $(".mega-head",row).setAttribute("aria-expanded","true"); } };
     m.appendChild(row);
@@ -335,6 +335,8 @@ $$(".nav .nav-item[data-cats]").forEach(item=>{
   item.addEventListener("focusin",()=>set(true)); item.addEventListener("focusout",e=>{ if(!item.contains(e.relatedTarget)) set(false); });
   item.addEventListener("keydown",e=>{ if(e.key==="Escape"){ set(false); a.blur(); } });
 });
+// On phones the tool intro is collapsed behind a tap (see .ti-toggle in styles.css).
+document.addEventListener("click", e => { const b=e.target.closest(".ti-toggle"); if(!b) return; const o=b.closest(".tool-intro").toggleAttribute("data-open"); b.setAttribute("aria-expanded",o); });
 // Give the sticky bar a shadow once the page is scrolled under it.
 { const bar=$(".bar"); const onScroll=()=>bar.toggleAttribute("data-scrolled",window.scrollY>8); window.addEventListener("scroll",onScroll,{passive:true}); onScroll(); }
 /* ---- routing ----
@@ -363,6 +365,8 @@ function go(id, replace=false){
 }
 document.addEventListener("click", e => {
   const a=e.target.closest("a[href]"); if(!a || e.defaultPrevented || e.button!==0 || e.metaKey||e.ctrlKey||e.shiftKey||e.altKey || a.target==="_blank" || a.hasAttribute("download")) return;
+  // Category crumb: open the All-tools menu with that category expanded.
+  if(a.dataset.catCrumb){ e.preventDefault(); setMega(true); const row=$$(".mega-cat").find(r=>r.dataset.cats.split("|").includes(a.dataset.catCrumb)); if(row && !row.hasAttribute("data-open")) $(".mega-head",row).click(); row?.scrollIntoView({block:"nearest"}); return; }
   const r=routeFor(a.href); if(r==null) return; e.preventDefault(); go(r);
 });
 window.addEventListener("popstate", () => showTool(currentRoute()));

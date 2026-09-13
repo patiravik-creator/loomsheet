@@ -41,7 +41,8 @@
   .icon-btn.theme .moon{display:none}
   html[data-theme=dark] .icon-btn.theme .moon{display:block}
   html[data-theme=dark] .icon-btn.theme .sun{display:none}
-  .share-btn{margin-left:auto;font-size:13px;padding:6px 10px}
+  .share-btn{font-size:13px;padding:6px 10px}
+  .crumb-actions{margin-left:auto;display:flex;gap:8px;flex:none}
   .crumbs{display:flex;align-items:center;gap:6px}
   .nav a{position:relative;color:var(--ink-2);text-decoration:none;padding:8px 10px;border-radius:4px;white-space:nowrap;transition:color .18s,background-color .18s}
   .nav a::after{content:"";position:absolute;left:10px;right:10px;bottom:4px;height:2px;border-radius:2px;background:var(--accent);transform:scaleX(0);transform-origin:left;transition:transform .22s ease}
@@ -143,6 +144,9 @@
   /* tool page */
   .tool{display:none}.tool[data-active]{display:block}
   .crumbs{font-size:14px;color:var(--ink-3);margin-bottom:14px}
+  .crumbs a{color:var(--ink-2);text-decoration:none;border-radius:4px;padding:2px 4px;margin:0 -4px;transition:color .15s,background-color .15s}
+  .crumbs a:hover{color:var(--accent);background:var(--paper)}
+  .crumb-current{color:var(--ink)}
   .crumbs a{color:var(--ink-2);text-decoration:none}.crumbs a:hover{color:var(--accent)}
   .sheet{background:var(--sheet);border:1px solid var(--rule);border-radius:var(--radius);padding:32px;max-width:900px}
   .sheet h2{font-size:24px;font-weight:650;margin:0 0 4px;letter-spacing:-.01em}
@@ -181,7 +185,17 @@
   .ti-card-text{display:flex;flex-direction:column;gap:2px;min-width:0}
   .ti-card-text b{font-size:14px;font-weight:600}
   .ti-card-text span{font-size:12.5px;color:var(--ink-3);line-height:1.35}
+  .ti-toggle{display:none}
   @media (max-width:760px){.ti-grid{grid-template-columns:1fr}}
+  @media (max-width:640px){
+    .ti-badge{display:block;line-height:1.5;padding:10px 14px}
+    .ti-badge svg{display:inline-block;vertical-align:-3px;margin-right:6px}
+    .ti-toggle{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:12px 16px;background:var(--sheet);border:1px solid var(--rule);border-radius:var(--radius);color:var(--ink);font:inherit;font-weight:600;cursor:pointer;text-align:left}
+    .ti-toggle .chev{width:8px;height:8px;border-right:1.8px solid var(--ink-3);border-bottom:1.8px solid var(--ink-3);transform:rotate(45deg) translateY(-2px);transition:transform .2s;flex:none}
+    .tool-intro[data-open] .ti-toggle .chev{transform:rotate(-135deg) translateY(-2px)}
+    .tool-intro:not([data-open]) .ti-grid{display:none}
+    .tool-intro{gap:10px;margin-bottom:14px}
+  }
 
   .drop{position:relative;border:1.5px dashed var(--rule);border-radius:var(--radius);padding:40px 24px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
   .drop:hover,.drop.over{border-color:var(--accent);background:#F3F6FF}
@@ -328,5 +342,5 @@
   .progress i{display:block;height:100%;width:0;background:var(--cc,var(--accent));transition:width .2s}
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:999px;font-size:14px;box-shadow:0 8px 24px var(--shadow);z-index:50;opacity:0;pointer-events:none;transition:opacity .2s}
   .toast[data-on]{opacity:1}
-  @media (max-width:640px){.nav{overflow-x:auto}.nav-item[data-cats]>a{padding-right:10px}.nav-item[data-cats]>a::before,.dd{display:none!important}.wrap{padding:20px 14px 60px}.sheet{padding:20px}.bar-in{padding:0 14px;gap:4px}.brand span{display:none}.nav{display:flex}.foot-grid{grid-template-columns:1fr}.hero{padding:24px 18px}.hero h1{font-size:26px}}
+  @media (max-width:640px){.nav{display:none}.crumbs{flex-wrap:wrap;line-height:1.6}.crumb-actions{flex-basis:100%;margin:6px 0 0}.crumbs .share-btn{font-size:12px;padding:4px 9px;white-space:nowrap}.wrap{padding:20px 14px 60px}.sheet{padding:20px}.bar-in{padding:0 14px;gap:4px}.brand span{display:none}.foot-grid{grid-template-columns:1fr}.hero{padding:24px 18px}.hero h1{font-size:26px}}
   @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
