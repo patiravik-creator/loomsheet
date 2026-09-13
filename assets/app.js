@@ -55,7 +55,7 @@ function isFav(id){ return P.favs.includes(id); }
 function toggleFav(id){ const f=P.favs; const i=f.indexOf(id); i>=0?f.splice(i,1):f.push(id); P.favs=f; buildHome($("#tool-search").value); $$("[data-favtool]").forEach(b=>{ if(b.dataset.favtool===id){ b.toggleAttribute("data-on",isFav(id)); b.textContent=isFav(id)?"★ Favorited":"☆ Favorite"; } }); toast(isFav(id)?"Added to favorites":"Removed from favorites"); }
 function noteRecent(id){ if(!P.on("recent")) return; const r=P.recent.filter(x=>x!==id); r.unshift(id); P.recent=r.slice(0,6); }
 function greet(){ const n=P.name.trim(); const h=new Date().getHours(), tod=h<5?"Working late":h<12?"Good morning":h<17?"Good afternoon":"Good evening";
-  $("#hero-title").textContent = n ? `${tod}, ${n}. What can we do with your PDF today?` : "Welcome to SheetSimple. What can we do with your PDF today?"; }
+  $("#hero-title").textContent = n ? `${tod}, ${n}. What can we do with your PDF today?` : "Welcome to Loomsheet. What can we do with your PDF today?"; }
 function openPz(){ const p=$("#pz"); p.hidden=false; $("#pz-name").value=P.name; $("#pz-recent").checked=P.on("recent"); $("#pz-prefs").checked=P.on("prefs"); $("#pz-sig").checked=P.on("sig"); $("#pz-name").focus(); }
 $("#personalize-btn").onclick=()=>{ $("#pz").hidden ? openPz() : ($("#pz").hidden=true); };
 $("#foot-personalize").onclick=e=>{ e.preventDefault(); location.hash=""; showTool(""); openPz(); $("#pz").scrollIntoView({behavior:"smooth",block:"center"}); };
@@ -80,7 +80,7 @@ function restorePrefs(sheet,id){
 /* ---------- toast + share ---------- */
 const toastEl = el("div",{class:"toast"}); document.body.appendChild(toastEl); let toastT;
 function toast(msg){ toastEl.textContent=msg; toastEl.setAttribute("data-on",""); clearTimeout(toastT); toastT=setTimeout(()=>toastEl.removeAttribute("data-on"),2200); }
-async function shareTool(t){ const url=location.origin+location.pathname+"#"+t.id, data={title:`${t.name} — SheetSimple`,text:t.desc,url};
+async function shareTool(t){ const url=location.origin+location.pathname+"#"+t.id, data={title:`${t.name} — Loomsheet`,text:t.desc,url};
   if(navigator.share){ try{ await navigator.share(data); return; }catch{} }
   try{ await navigator.clipboard.writeText(url); toast("Link copied"); }catch{ prompt("Copy this link:",url); } }
 document.addEventListener("keydown", e => { if(e.key==="Escape"){ $("#mega").removeAttribute("data-open"); $("#menu-btn").setAttribute("aria-expanded","false"); } });
@@ -184,7 +184,7 @@ function runButton(root, label, fn){
 const shell = (title, lede, inner) => `<h2>${title}</h2><p class="lede">${lede}</p>${inner}<div class="actions"><button class="btn" data-run disabled>Run</button><span class="status"></span></div><div class="progress"><i></i></div><div class="result"></div>`;
 
 /* ---------- icons + colours ---------- */
-const CAT_COLOR={"Compress":"var(--c-compress)","Convert from PDF":"var(--c-from)","Convert to PDF":"var(--c-to)","Organize":"var(--c-org)","Edit":"var(--c-edit)","Fill & Sign":"var(--c-sign)","Protect":"var(--c-protect)","AI":"var(--c-ai)","Scan":"var(--c-scan)"};
+const CAT_COLOR={"Compress":"var(--c-compress)","Convert from PDF":"var(--c-from)","Convert to PDF":"var(--c-to)","Organize":"var(--c-org)","Edit":"var(--c-edit)","Fill & Sign":"var(--c-sign)","Protect":"var(--c-protect)","AI":"var(--c-ai)","Scan":"var(--c-scan)","About":"var(--ink-2)"};
 const G={
   compress:'<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 12h6M12 9v6"/><path d="m9 15 3 3 3-3" opacity=".0"/>',
   image:'<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="m21 16-5-5-8 8"/>',
@@ -244,7 +244,7 @@ const built = {};
 function showTool(id){
   $$(".tool").forEach(t=>t.removeAttribute("data-active"));
   const t = TOOLS.find(x=>x.id===id);
-  if(!t || t.na){ $("#home").setAttribute("data-active",""); window.scrollTo(0,0); document.title="SheetSimple — every PDF tool, right in your browser"; return; }
+  if(!t || t.na){ $("#home").setAttribute("data-active",""); window.scrollTo(0,0); document.title="Loomsheet — every PDF tool, right in your browser"; return; }
   let sec = $("#tool-"+id);
   if(!sec){
     sec = el("section",{class:"tool",id:"tool-"+id},`<div class="crumbs"><a href="#">All tools</a> / ${t.cat} / ${t.name}<button class="btn quiet share-btn fav-btn" data-favtool="${id}" ${isFav(id)?"data-on":""}>${isFav(id)?"★ Favorited":"☆ Favorite"}</button><button class="btn quiet share-btn" data-share>Share</button></div><div class="sheet" data-cc style="--cc:${CAT_COLOR[t.cat]}"></div>`);
@@ -253,7 +253,7 @@ function showTool(id){
     const h2=$("h2",sh); if(h2){ const head=el("div",{class:"tool-head"},icon(t)); h2.replaceWith(head); head.appendChild(h2); }
     restorePrefs(sh,id);
   }
-  sec.setAttribute("data-active",""); window.scrollTo(0,0); noteRecent(id); document.title = t.name+" — SheetSimple"; $('meta[name=description]').setAttribute("content", t.desc+" Free, private, runs in your browser.");
+  sec.setAttribute("data-active",""); window.scrollTo(0,0); noteRecent(id); document.title = t.name+" — Loomsheet"; $('meta[name=description]').setAttribute("content", t.desc+" Free, private, runs in your browser.");
 }
 const cardHtml = t => t.na ? `<div class="card na" title="${esc(t.na)}">${icon(t)}<div><b>${t.name}</b><span>${t.na}</span></div></div>` : `<a class="card" href="#${t.id}" style="--cc:${CAT_COLOR[t.cat]}">${icon(t)}<div><b>${t.name}</b><span>${t.desc}</span></div><button class="fav" data-fav="${t.id}" ${isFav(t.id)?"data-on":""} title="${isFav(t.id)?"Remove from favorites":"Add to favorites"}" aria-label="Favorite">${isFav(t.id)?"★":"☆"}</button></a>`;
 function buildHome(filter=""){
@@ -990,6 +990,19 @@ reg({ id:"repair", cat:"Protect", name:"Repair PDF", desc:"Rebuild a damaged PDF
     catch(e){ st.set("Structure repair failed — rebuilding from page images…"); const src=await loadPdfjs(buf); out=await rasterizePages(buf,idx(1,src.numPages).map(i=>i+1),2,0.9,(i,n)=>st.set(`Rebuilding page ${i} of ${n}…`)); how="Rebuilt from page images (text is no longer selectable — run OCR if needed)."; }
     st.set("Done.","ok"); st.show(`<p>${how}</p><div class="downloads">${download(out,baseName(file)+"-repaired.pdf")}</div>`);
   });
+}});
+
+/* ================= ABOUT ================= */
+reg({ id:"about", cat:"About", name:"About", desc:"What Loomsheet provides.", build(root){
+  const groups = CATS.map(c => ({ cat:c, tools: TOOLS.filter(t=>t.cat===c && !t.na) })).filter(g=>g.tools.length);
+  const list = groups.map(g => `<div class="field"><label>${esc(g.cat)}</label><p style="margin:4px 0 0;color:var(--ink-2)">${g.tools.map(t=>esc(t.name)).join(", ")}</p></div>`).join("");
+  root.innerHTML = `<h2>About</h2>
+    <p class="lede">Loomsheet is a free, browser-based PDF toolkit. Every tool below runs entirely on your own device — files are opened, processed, and downloaded right in this tab, nothing is uploaded to a server, and it's all gone the moment you close it. No account, no sign-up, no tracking.</p>
+    <div class="options">${list}</div>
+    <h2 style="margin-top:28px">How it works</h2>
+    <p class="lede">Everything here is plain client-side JavaScript. Heavier libraries (OCR, Office file conversion) only load the moment a tool actually needs them, so the home page stays fast. Anything you build device-side — favorites, recent tools, remembered settings, a saved signature — is stored only in this browser and never sent anywhere.</p>
+    <p class="lede">The one exception is the AI tools: to summarize, translate, or answer questions about a document, its text is sent to Claude, which requires your own Anthropic API key. Everything else works completely offline once the page has loaded.</p>
+    <p class="lede">Loomsheet can also be installed like an app — look for "Install" or "Add to Home Screen" in your browser's menu.</p>`;
 }});
 
 /* ================= boot ================= */

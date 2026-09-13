@@ -1,6 +1,6 @@
 {
-  "name": "SheetSimple",
-  "short_name": "SheetSimple",
+  "name": "Loomsheet",
+  "short_name": "Loomsheet",
   "description": "Every PDF tool, right in your browser.",
   "start_url": "./",
   "scope": "./",
