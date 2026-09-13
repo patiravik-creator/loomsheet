@@ -15,10 +15,9 @@ Every PDF tool, right in your browser. Compress, convert, organize, edit, sign, 
 | Edit | Edit, Annotate, Reader, Number pages, Header & footer, Crop, Redact, Watermark, Form filler, Metadata |
 | Fill & Sign | Sign, Flatten |
 | Protect | Unlock, Repair |
-| AI | Assistant, Chat, Summarizer, Translate, Question generator |
 | Scan | Camera scanner |
 
-Tools shown greyed out on the home page (Protect, Request signatures, Share, PDF/A, HWP, Pages) need a server. They are implemented by the Java service in [`backend/`](backend/) — see [Backend](#backend) below. The site itself never depends on it; those six tools simply stay greyed out until a backend is deployed and wired in.
+Five AI tools (Assistant, Chat, Summarizer, Translate, Question generator) exist in `app.js` but are hidden from the site because they need a visitor's own API key — remove an id from the `HIDDEN` set in `app.js` to show one. Tools shown greyed out on the home page (Protect, Request signatures, Share, PDF/A, HWP, Pages) need a server. They are implemented by the Java service in [`backend/`](backend/) — see [Backend](#backend) below. The site itself never depends on it; those six tools simply stay greyed out until a backend is deployed and wired in.
 
 ## How it works
 
@@ -27,7 +26,7 @@ Everything is static: one `index.html`, one stylesheet, one script. PDF work is 
 [mammoth](https://github.com/mwilliamson/mammoth.js), [SheetJS](https://sheetjs.com/) and [Tesseract.js](https://tesseract.projectnaptha.com/),
 all loaded from cdnjs. No build step; the static site needs no backend at all.
 
-The AI tools call a third-party AI API directly from the browser. Each visitor enters their own API key (kept in memory only). To let visitors use it without a key, put a small proxy in front of the API that holds your key server-side — never embed a key in this repo.
+The (currently hidden) AI tools call a third-party AI API directly from the browser. Each visitor enters their own API key (kept in memory only). To let visitors use it without a key, put a small proxy in front of the API that holds your key server-side — never embed a key in this repo.
 
 ## Run locally
 
@@ -72,6 +71,7 @@ manifest.json        installable-app metadata
 robots.txt, sitemap.xml
 assets/styles.css    design tokens, light + dark themes
 assets/app.js        helpers, tool registry, routing, every tool
+assets/tool-content.js   per-tool intro, steps, FAQ and related tools, shown under each tool and in its page
 assets/favicon.svg, icon-192.png, icon-512.png, og-image.png
 backend/             Java 21 / Spring Boot service for the six server-side tools (own README)
 ```
@@ -87,7 +87,7 @@ cd tests && npm install        # once; the generator uses Playwright from here
 node scripts/build-pages.js    # from the repo root
 ```
 
-It reads the tool list from the running app, writes one `index.html` per tool, removes pages for tools that no longer exist, rewrites `sitemap.xml`, and normalises links in `index.html`. Commit the output. CI fails if the generated pages are out of date. Old `#tool-id` links keep working — the app turns them into the real URL.
+It reads the tool list from the running app, writes one `index.html` per tool (including that tool's intro, steps and FAQ from `assets/tool-content.js`, plus FAQ structured data), removes pages for tools that no longer exist, rewrites `sitemap.xml`, and normalises links in `index.html`. After editing `tool-content.js`, re-run it. Commit the output. CI fails if the generated pages are out of date. Old `#tool-id` links keep working — the app turns them into the real URL.
 
 ## Tests
 

@@ -19,6 +19,7 @@
 const fs = require("fs");
 const path = require("path");
 const http = require("http");
+const vm = require("vm");
 
 const ROOT_DIR = path.join(__dirname, "..");
 const args = process.argv.slice(2);
@@ -58,7 +59,7 @@ async function readRegistry(base) {
     page.on("pageerror", (e) => errors.push(e.message));
     await page.goto(base, { waitUntil: "load" });
     await page.waitForFunction(() => typeof TOOLS !== "undefined" && TOOLS.length > 0, null, { timeout: 15000 });
-    const tools = await page.evaluate(() => TOOLS.map((t) => ({ id: t.id, cat: t.cat, name: t.name, desc: t.desc || "", na: t.na || "", slug: slugOf(t) })));
+    const tools = await page.evaluate(() => TOOLS.map((t) => ({ id: t.id, cat: t.cat, name: t.name, desc: t.desc || "", na: t.na || "", hidden: !!t.hidden, slug: slugOf(t) })));
     if (errors.length) console.warn("Page errors while reading the registry:\n  " + errors.join("\n  "));
     return tools;
   } finally { await browser.close(); }
@@ -66,7 +67,14 @@ async function readRegistry(base) {
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-function toolPage(indexHtml, t, site, allSlugs) {
+// assets/tool-content.js is a browser script; evaluate it against a bare `window` to get the content and renderer.
+function loadToolContent() {
+  const win = {};
+  vm.runInNewContext(fs.readFileSync(path.join(ROOT_DIR, "assets", "tool-content.js"), "utf8"), { window: win });
+  return { content: win.TOOL_CONTENT || {}, render: win.renderToolInfo };
+}
+
+function toolPage(indexHtml, t, site, allSlugs, tools, tc) {
   let h = indexHtml;
   const url = site + t.slug + "/";
   const title = `${t.name} — free, private, in your browser | Loomsheet`;
@@ -87,6 +95,16 @@ function toolPage(indexHtml, t, site, allSlugs) {
     isPartOf: { "@type": "WebSite", name: "Loomsheet", url: site },
   })}</script>`);
 
+  // Real content for this tool, straight from assets/tool-content.js, so crawlers see text rather than an empty shell.
+  // The app removes this block and renders its own (identical) copy under the tool.
+  const c = tc.content[t.id];
+  if (c && tc.render) {
+    const info = tc.render(t, tools, { link: (r) => "../" + r.slug + "/" });
+    h = h.replace(/<footer>/, `<div data-static-info>${info}</div>\n  <footer>`);
+    const faq = { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: c.faq.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })) };
+    h = h.replace(/(<script type="application\/ld\+json">[\s\S]*?<\/script>)/, `$1\n<script type="application/ld+json">${JSON.stringify(faq)}</script>`);
+  }
+
   // Living one folder down: point shared assets and site links back up to the root.
   h = h.replace(/(href|src)="assets\//g, '$1="../assets/');
   h = h.replace(/href="manifest\.json"/g, 'href="../manifest.json"');
@@ -103,7 +121,10 @@ function toolPage(indexHtml, t, site, allSlugs) {
   let tools;
   try { tools = await readRegistry(base); } finally { if (server) server.srv.close(); }
 
-  const live = tools.filter((t) => !t.na);
+  const live = tools.filter((t) => !t.na && !t.hidden);
+  const tc = loadToolContent();
+  const missing = live.filter((t) => t.id !== "about" && !tc.content[t.id]).map((t) => t.id);
+  if (missing.length) console.warn("No entry in assets/tool-content.js for: " + missing.join(", "));
   const slugs = live.map((t) => t.slug);
   const dupes = slugs.filter((s, i) => slugs.indexOf(s) !== i);
   if (dupes.length) { console.error("Two tools share a URL slug — rename one: " + [...new Set(dupes)].join(", ")); process.exit(1); }
@@ -126,7 +147,7 @@ function toolPage(indexHtml, t, site, allSlugs) {
   for (const t of live) {
     const dir = path.join(ROOT_DIR, t.slug);
     const file = path.join(dir, "index.html");
-    const html = toolPage(index, t, site, slugs);
+    const html = toolPage(index, t, site, slugs, live, tc);
     if (fs.existsSync(file) && fs.readFileSync(file, "utf8") === html) { unchanged++; continue; }
     if (!DRY) { fs.mkdirSync(dir, { recursive: true }); fs.writeFileSync(file, html); }
     written++;

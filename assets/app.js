@@ -244,12 +244,16 @@ const ICON={compress:"compress","pdf-converter":"convert","pdf-to-jpg":"image","
  "batch-compress":"compress","extract-images":"image","resize-pages":"organize","header-footer":"number",metadata:"form",repair:"flatten",
  ai:"ai",chat:"chat",summarize:"summary",translate:"translate",questions:"quiz",scanner:"scan"};
 const icon = t => `<span class="ic" style="background:${CAT_COLOR[t.cat]}"><svg viewBox="0 0 24 24">${G[ICON[t.id]]||G.pdf}</svg></span>`;
-const POPULAR=["compress","merge","pdf-to-word","edit","sign","scanner","ai"];
+const POPULAR=["compress","merge","pdf-to-word","edit","sign","scanner","ocr"];
 
 /* ---------- registry + routing ---------- */
 const CATS = ["Compress","Convert from PDF","Convert to PDF","Organize","Edit","Fill & Sign","Protect","AI","Scan"];
 const TOOLS = [];
-const reg = t => TOOLS.push(t);
+// Tools that need the visitor's own API key are registered (the code stays) but hidden from the site for now:
+// no card, no menu entry, no page, and their URLs go home. Remove an id from this set to bring one back.
+const HIDDEN = new Set(["ai","chat","summarize","translate","questions"]);
+const reg = t => { t.hidden = HIDDEN.has(t.id); TOOLS.push(t); };
+const usable = t => !!t && !t.na && !t.hidden;
 const built = {};
 // Light up the top-nav link for the section the current tool belongs to (each link points at one representative tool).
 function markNav(t){
@@ -258,8 +262,8 @@ function markNav(t){
 function showTool(id){
   $$(".tool").forEach(t=>t.removeAttribute("data-active"));
   const t = TOOLS.find(x=>x.id===id);
-  markNav(t && !t.na ? t : null);
-  if(!t || t.na){ $("#home").setAttribute("data-active",""); window.scrollTo(0,0); document.title="Loomsheet — every PDF tool, right in your browser"; $('link[rel=canonical]')?.setAttribute("href", ROOT); return; }
+  markNav(usable(t) ? t : null);
+  if(!usable(t)){ $("#home").setAttribute("data-active",""); window.scrollTo(0,0); document.title="Loomsheet — every PDF tool, right in your browser"; $('link[rel=canonical]')?.setAttribute("href", ROOT); return; }
   let sec = $("#tool-"+id);
   if(!sec){
     sec = el("section",{class:"tool",id:"tool-"+id},`<div class="crumbs"><a href="${ROOT}">All tools</a> / ${t.cat} / ${t.name}<button class="btn quiet share-btn fav-btn" data-favtool="${id}" ${isFav(id)?"data-on":""}>${isFav(id)?"★ Favorited":"☆ Favorite"}</button><button class="btn quiet share-btn" data-share>Share</button></div><div class="sheet" data-cc style="--cc:${CAT_COLOR[t.cat]}"></div>`);
@@ -267,6 +271,8 @@ function showTool(id){
     $("#tools").appendChild(sec); const sh=$(".sheet",sec); t.build(sh, t);
     const h2=$("h2",sh); if(h2){ const head=el("div",{class:"tool-head"},icon(t)); h2.replaceWith(head); head.appendChild(h2); }
     restorePrefs(sh,id);
+    // Intro, steps, questions and related tools (assets/tool-content.js) under the tool.
+    if(window.renderToolInfo){ const info=renderToolInfo(t, TOOLS, {link:toolUrl, icon}); if(info) sec.insertAdjacentHTML("beforeend", info); }
   }
   sec.setAttribute("data-active",""); window.scrollTo(0,0); noteRecent(id); document.title = t.name+" — Loomsheet"; $('meta[name=description]').setAttribute("content", t.desc+" Free, private, runs in your browser."); $('link[rel=canonical]')?.setAttribute("href", toolUrl(t));
 }
@@ -274,13 +280,13 @@ const cardHtml = t => t.na ? `<div class="card na" title="${esc(t.na)}">${icon(t
 function buildHome(filter=""){
   const g=$("#home-grid"), m=$("#mega-in"); g.innerHTML=""; m.innerHTML=""; const f=filter.trim().toLowerCase(); let any=false;
   for(const c of CATS){
-    let ts = TOOLS.filter(t=>t.cat===c); if(!ts.length) continue;
+    let ts = TOOLS.filter(t=>t.cat===c && !t.hidden); if(!ts.length) continue;
     m.appendChild(el("div",{},`<h4>${c}</h4>${ts.filter(t=>!t.na).map(t=>`<a href="${toolUrl(t)}">${icon(t)}${t.name}</a>`).join("")}`));
     if(f) ts=ts.filter(t=>(t.name+" "+(t.desc||"")+" "+c).toLowerCase().includes(f)); if(!ts.length) continue; any=true;
     g.appendChild(el("div",{class:"cat"},`<h3><i style="background:${CAT_COLOR[c]}"></i>${c}</h3><div class="grid">${ts.map(cardHtml).join("")}</div>`));
   }
   if(!any) g.innerHTML=`<p class="no-match">No tool matches "${esc(filter)}". Try another word, like "merge", "word", or "sign".</p>`;
-  const favs=P.favs.map(id=>TOOLS.find(t=>t.id===id)).filter(Boolean), rec=P.on("recent")?P.recent.map(id=>TOOLS.find(t=>t.id===id)).filter(t=>t&&!favs.includes(t)):[];
+  const favs=P.favs.map(id=>TOOLS.find(t=>t.id===id)).filter(usable), rec=P.on("recent")?P.recent.map(id=>TOOLS.find(t=>t.id===id)).filter(t=>usable(t)&&!favs.includes(t)):[];
   $("#fav-section").innerHTML = favs.length && !f ? `<div class="cat recent"><h3><i style="background:#E0A100"></i>Your favorites</h3><div class="grid">${favs.map(cardHtml).join("")}</div></div>` : "";
   $("#recent-section").innerHTML = rec.length && !f ? `<div class="cat recent"><h3><i style="background:var(--ink-3)"></i>Recently used</h3><div class="grid">${rec.map(cardHtml).join("")}</div></div>` : "";
   $$("[data-fav]").forEach(b=>b.onclick=e=>{ e.preventDefault(); e.stopPropagation(); toggleFav(b.dataset.fav); });
@@ -313,19 +319,19 @@ function routeFor(href){
   if(!u.href.startsWith(ROOT)) return null;
   const seg=u.href.slice(ROOT.length).replace(/[?#].*$/,"").replace(/index\.html$/,"").replace(/\/+$/,"");
   if(!seg) return "";
-  const t=TOOLS.find(x=>!x.na && slugOf(x)===seg); return t ? t.id : null;
+  const t=TOOLS.find(x=>usable(x) && slugOf(x)===seg); return t ? t.id : null;
 }
 // Work out which tool the current address means, upgrading legacy #id hashes to the real URL.
 function currentRoute(){
   const h=location.hash.slice(1);
-  if(h){ const t=TOOLS.find(x=>x.id===h); history.replaceState(null,"", t && !t.na ? toolUrl(t) : ROOT); return t && !t.na ? t.id : ""; }
+  if(h){ const t=TOOLS.find(x=>x.id===h); history.replaceState(null,"", usable(t) ? toolUrl(t) : ROOT); return usable(t) ? t.id : ""; }
   const r=routeFor(location.href); return r==null ? "" : r;
 }
 function go(id, replace=false){
-  const t=TOOLS.find(x=>x.id===id); const url=t && !t.na ? toolUrl(t) : ROOT;
+  const t=TOOLS.find(x=>x.id===id); const url=usable(t) ? toolUrl(t) : ROOT;
   if(url!==location.href) history[replace?"replaceState":"pushState"](null,"",url);
   $("#mega").removeAttribute("data-open"); $("#menu-btn").setAttribute("aria-expanded","false");
-  showTool(t && !t.na ? id : "");
+  showTool(usable(t) ? id : "");
 }
 document.addEventListener("click", e => {
   const a=e.target.closest("a[href]"); if(!a || e.defaultPrevented || e.button!==0 || e.metaKey||e.ctrlKey||e.shiftKey||e.altKey || a.target==="_blank" || a.hasAttribute("download")) return;
@@ -1070,14 +1076,13 @@ reg({ id:"repair", cat:"Protect", name:"Repair PDF", desc:"Rebuild a damaged PDF
 
 /* ================= ABOUT ================= */
 reg({ id:"about", cat:"About", name:"About", desc:"What Loomsheet provides.", build(root){
-  const groups = CATS.map(c => ({ cat:c, tools: TOOLS.filter(t=>t.cat===c && !t.na) })).filter(g=>g.tools.length);
+  const groups = CATS.map(c => ({ cat:c, tools: TOOLS.filter(t=>t.cat===c && usable(t)) })).filter(g=>g.tools.length);
   const list = groups.map(g => `<div class="field"><label>${esc(g.cat)}</label><p style="margin:4px 0 0;color:var(--ink-2)">${g.tools.map(t=>esc(t.name)).join(", ")}</p></div>`).join("");
   root.innerHTML = `<h2>About</h2>
     <p class="lede">Loomsheet is a free, browser-based PDF toolkit. Every tool below runs entirely on your own device — files are opened, processed, and downloaded right in this tab, nothing is uploaded to a server, and it's all gone the moment you close it. No account, no sign-up, no tracking.</p>
     <div class="options">${list}</div>
     <h2 style="margin-top:28px">How it works</h2>
     <p class="lede">Everything here is plain client-side JavaScript. Heavier libraries (OCR, Office file conversion) only load the moment a tool actually needs them, so the home page stays fast. Anything you build device-side — favorites, recent tools, remembered settings, a saved signature — is stored only in this browser and never sent anywhere.</p>
-    <p class="lede">The one exception is the AI tools: to summarize, translate, or answer questions about a document, its text is sent to a third-party AI service, using your own API key. Everything else works completely offline once the page has loaded.</p>
     <p class="lede">Loomsheet can also be installed like an app — look for "Install" or "Add to Home Screen" in your browser's menu.</p>`;
 }});
 
@@ -1085,4 +1090,6 @@ reg({ id:"about", cat:"About", name:"About", desc:"What Loomsheet provides.", bu
 // The static links in the HTML are relative ("sign-pdf/" or "../sign-pdf/") so a page works wherever it's loaded from,
 // but once pushState has changed the address a relative link would resolve against the new folder. Make them absolute once, at load.
 $$("a[href]").forEach(a=>{ if(a.getAttribute("href")==="#") return; const r=routeFor(a.href); if(r===null) return; const t=r&&TOOLS.find(x=>x.id===r); a.setAttribute("href", t?toolUrl(t):ROOT); });
+// Generated tool pages carry a static copy of the tool's info for search engines; the app renders its own, so drop the static one.
+$$("[data-static-info]").forEach(e=>e.remove());
 buildHome(); showTool(currentRoute());

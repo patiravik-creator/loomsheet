@@ -22,6 +22,7 @@
 <meta name="twitter:description" content="Remove pages you don't need. Free, private, runs in your browser — nothing is uploaded.">
 <meta name="twitter:image" content="https://patiravik-creator.github.io/loomsheet/assets/og-image.png">
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"Delete PDF Pages","url":"https://patiravik-creator.github.io/loomsheet/delete-pdf-pages/","applicationCategory":"UtilitiesApplication","operatingSystem":"Any","browserRequirements":"Requires JavaScript","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"description":"Remove pages you don't need. Free, private, runs in your browser — nothing is uploaded.","isPartOf":{"@type":"WebSite","name":"Loomsheet","url":"https://patiravik-creator.github.io/loomsheet/"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is the original file changed?","acceptedAnswer":{"@type":"Answer","text":"Never. You download a new copy; the original on your device is untouched."}},{"@type":"Question","name":"Can I delete many pages at once?","acceptedAnswer":{"@type":"Answer","text":"Click ✕ on each. To keep just a few pages out of many, Extract PDF Pages is quicker."}},{"@type":"Question","name":"Will page numbers printed on the pages update?","acceptedAnswer":{"@type":"Answer","text":"No — printed numbers are part of the page content. Use Number Pages afterwards to add fresh numbering."}}]}</script>
 <title>Delete PDF Pages — free, private, in your browser | Loomsheet</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -34,7 +35,7 @@
     <a class="brand" href="../" aria-label="Loomsheet home"><svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect x="7" y="5" width="15" height="19" rx="2" transform="rotate(-8 14 14)" opacity=".35"/><rect x="10" y="7" width="15" height="19" rx="2" transform="rotate(5 17 16)" opacity=".6"/><rect x="9" y="8" width="15" height="19" rx="2"/><path d="M13 14h7M13 18h7M13 22h4" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg><span>Loomsheet</span></a>
     <button class="menu-btn" id="menu-btn" aria-expanded="false">All tools</button>
     <nav class="nav">
-      <a href="../compress-pdf/">Compress</a><a href="../pdf-converter/">Convert</a><a href="../merge-pdf/">Merge</a><a href="../organize-pdf/">Organize</a><a href="../edit-pdf/">Edit</a><a href="../sign-pdf/">Sign</a><a href="../ai-pdf-assistant/">AI</a><a href="../pdf-scanner/">Scan</a><a href="../about/">About</a>
+      <a href="../compress-pdf/">Compress</a><a href="../pdf-converter/">Convert</a><a href="../merge-pdf/">Merge</a><a href="../organize-pdf/">Organize</a><a href="../edit-pdf/">Edit</a><a href="../sign-pdf/">Sign</a><a href="../pdf-scanner/">Scan</a><a href="../about/">About</a>
     </nav>
     <span style="flex:1"></span>
     <button class="icon-btn theme" id="theme-btn" title="Switch light / dark" aria-label="Switch light or dark theme"><svg viewBox="0 0 24 24"><path class="sun" d="M12 4V2M12 22v-2M4 12H2M22 12h-2M5.6 5.6 4.2 4.2M19.8 19.8l-1.4-1.4M5.6 18.4l-1.4 1.4M19.8 4.2l-1.4 1.4"/><circle class="sun" cx="12" cy="12" r="4"/><path class="moon" d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button>
@@ -64,15 +65,25 @@
     <div id="home-grid"></div>
   </div>
   <div id="tools"></div>
+  <div data-static-info><section class="tool-info" data-tool-info="delete-pages">
+  <p class="ti-badge"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><b>Runs on your device.</b> Your file is never uploaded — it's processed in this tab and gone when you close it.</p>
+  <div class="ti-grid">
+    <div class="ti-about"><h3>About Delete PDF Pages</h3><p>Remove blank, duplicate, or unwanted pages from a PDF. Click the pages to remove, undo if you change your mind, and save a clean copy.</p></div>
+    <div class="ti-steps"><h3>How it works</h3><ol><li><span>1</span>Drop in the PDF; the pages appear as thumbnails.</li><li><span>2</span>Click ✕ on any page you want gone (↩ restores it).</li><li><span>3</span>Save the new file.</li></ol></div>
+  </div>
+  <div class="ti-faq"><h3>Common questions</h3><details><summary>Is the original file changed?</summary><p>Never. You download a new copy; the original on your device is untouched.</p></details><details><summary>Can I delete many pages at once?</summary><p>Click ✕ on each. To keep just a few pages out of many, Extract PDF Pages is quicker.</p></details><details><summary>Will page numbers printed on the pages update?</summary><p>No — printed numbers are part of the page content. Use Number Pages afterwards to add fresh numbering.</p></details></div>
+  <div class="ti-related"><h3>Often used next</h3><div class="ti-cards"><a href="../extract-pdf-pages/"><span class="ti-card-text"><b>Extract PDF Pages</b><span>Pull chosen pages out into a new PDF.</span></span></a><a href="../organize-pdf/"><span class="ti-card-text"><b>Organize PDF</b><span>Reorder, rotate, and remove pages visually.</span></span></a><a href="../number-pages/"><span class="ti-card-text"><b>Number Pages</b><span>Stamp page numbers on every page.</span></span></a><a href="../split-pdf/"><span class="ti-card-text"><b>Split PDF</b><span>Divide one PDF into several files.</span></span></a></div></div>
+</section></div>
   <footer>
     <div class="foot-grid">
       <div><b>Loomsheet</b><p>Free PDF tools that run in your browser. Nothing is uploaded; close the tab and everything is gone. Very large files depend on your device's memory.</p></div>
-      <div><b>Popular</b><a href="../compress-pdf/">Compress PDF</a><a href="../merge-pdf/">Merge PDF</a><a href="../pdf-to-word/">PDF to Word</a><a href="../sign-pdf/">Sign PDF</a><a href="../ai-pdf-assistant/">AI PDF Assistant</a></div>
+      <div><b>Popular</b><a href="../compress-pdf/">Compress PDF</a><a href="../merge-pdf/">Merge PDF</a><a href="../pdf-to-word/">PDF to Word</a><a href="../sign-pdf/">Sign PDF</a><a href="../pdf-ocr/">PDF OCR</a></div>
       <div><b>More</b><a href="../organize-pdf/">Organize pages</a><a href="../pdf-ocr/">PDF OCR</a><a href="../pdf-scanner/">Scanner</a><a href="../convert-to-pdf/">Convert to PDF</a><a href="../extract-images/">Extract images</a></div>
     </div>
     <p class="foot-note">© <span id="year"></span> Loomsheet · <a href="../about/">About</a> · No accounts, no uploads, no tracking · <a href="#" id="foot-personalize">Personalize</a> · Tip: install it as an app from your browser menu.</p>
   </footer>
 </div>
+<script src="../assets/tool-content.js"></script>
 <script src="../assets/app.js"></script>
 <script>document.getElementById("year").textContent=new Date().getFullYear();</script>
 <!-- Optional privacy-friendly analytics (no cookies). Sign up at goatcounter.com, then uncomment and set your code:

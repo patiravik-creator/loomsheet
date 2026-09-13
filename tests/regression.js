@@ -318,18 +318,17 @@ async function runFileTool(page, { id, label, files, multi = false, configure, r
     } catch (e) { record(id, "PDF Reader (open + render)", "fail", e.message, errs); }
   }
 
-  // ---------------- AI TOOLS (UI smoke test only — needs API key) ----------------
+  // ---------------- HIDDEN TOOLS (need a visitor's API key; registered but not shown) ----------------
   for (const id of ["ai", "chat", "summarize", "translate", "questions"]) {
-    let errs;
     try {
-      errs = await collectingErrors(page, async () => {
-        await gotoTool(page, id);
-        await page.waitForSelector(`#tool-${id} [data-key]`, { timeout: 10000 });
-        await page.locator(`#tool-${id} .drop input[type=file]`).first().setInputFiles(FIX("sample.pdf"));
-        await page.waitForTimeout(500);
-      });
-      record(id, `${id} (AI) — UI smoke test`, "info", "UI loaded, file accepted; not run end-to-end (needs Anthropic API key)", errs);
-    } catch (e) { record(id, `${id} (AI) — UI smoke test`, "fail", e.message, errs); }
+      await page.evaluate(() => { try { localStorage.clear(); } catch {} });
+      await page.goto(BASE + "#" + id, { waitUntil: "domcontentloaded" });
+      await page.waitForTimeout(400);
+      const homeActive = await page.$eval("#home", (h) => h.hasAttribute("data-active"));
+      const listed = await page.evaluate((id) => !!document.querySelector(`#home-grid a[href$="/${id}/"], #mega-in a[href$="/${id}/"]`) || [...document.querySelectorAll("#home-grid .card b, #mega-in a")].some((e) => TOOLS.find((t) => t.id === id && e.textContent.trim() === t.name)), id);
+      record(id, `${id} (hidden tool)`, homeActive && !listed ? "pass" : "fail",
+        homeActive && !listed ? "not listed anywhere; its old link goes home" : `homeActive=${homeActive} listed=${listed}`);
+    } catch (e) { record(id, `${id} (hidden tool)`, "fail", e.message); }
   }
 
   // ---------------- "NOT AVAILABLE" PLACEHOLDER TOOLS ----------------

@@ -25,7 +25,7 @@ const ok = (name, pass, detail = "") => { results.push({ name, pass }); console.
 
   // The registry, read once, to know which tool each slug should open.
   await page.goto(BASE, { waitUntil: "load" });
-  const tools = await page.evaluate(() => TOOLS.filter((t) => !t.na).map((t) => ({ id: t.id, name: t.name, slug: slugOf(t) })));
+  const tools = await page.evaluate(() => TOOLS.filter((t) => !t.na && !t.hidden).map((t) => ({ id: t.id, name: t.name, slug: slugOf(t) })));
   const bySlug = Object.fromEntries(tools.map((t) => [t.slug, t]));
   ok("every generated page matches a registered tool", slugs.every((s) => bySlug[s]), slugs.filter((s) => !bySlug[s]).join(", ") || "all matched");
   ok("every available tool has a page", tools.every((t) => slugs.includes(t.slug)), tools.filter((t) => !slugs.includes(t.slug)).map((t) => t.slug).join(", ") || "all present");
@@ -43,9 +43,16 @@ const ok = (name, pass, detail = "") => { results.push({ name, pass }); console.
       if (!title.includes(t.name)) bad.push(`${slug}: title "${title}"`);
       if (!canonical.endsWith("/" + slug + "/")) bad.push(`${slug}: canonical ${canonical}`);
       if (!cssLoaded) bad.push(`${slug}: stylesheet not applied (bad relative path?)`);
+      if (slug !== "about") {
+        const info = await page.evaluate(() => { const i = document.querySelector(".tool[data-active] .tool-info"); return i ? { badge: !!i.querySelector(".ti-badge"), steps: i.querySelectorAll(".ti-steps li").length, faq: i.querySelectorAll(".ti-faq details").length, related: i.querySelectorAll(".ti-cards a").length, staticLeft: document.querySelectorAll("[data-static-info]").length } : null; });
+        if (!info) bad.push(`${slug}: no tool-info section rendered`);
+        else if (!info.badge || info.steps < 3 || info.faq < 3 || info.related < 1 || info.staticLeft) bad.push(`${slug}: tool-info incomplete ${JSON.stringify(info)}`);
+        const staticHtml = fs.readFileSync(path.join(ROOT_DIR, slug, "index.html"), "utf8");
+        if (!staticHtml.includes("data-static-info") || !staticHtml.includes('"FAQPage"')) bad.push(`${slug}: static page lacks the info block or FAQ structured data`);
+      }
     } catch (e) { bad.push(`${slug}: ${e.message.split("\n")[0]}`); }
   }
-  ok("each page loads directly and opens its tool", bad.length === 0, bad.slice(0, 5).join(" | ") || `${slugs.length} ok`);
+  ok("each page loads directly, opens its tool, and shows its intro/steps/FAQ/related", bad.length === 0, bad.slice(0, 5).join(" | ") || `${slugs.length} ok`);
 
   // 2) Legacy hash links land on the tool at its real URL.
   await page.goto(BASE + "#pdf-to-word", { waitUntil: "domcontentloaded" });
