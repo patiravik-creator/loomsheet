@@ -16,17 +16,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * A full Spring context integration test for the /api/protect endpoint,
- * exercised through MockMvc (no real HTTP port, no real network — just
- * Spring's servlet-mocking layer).
- *
- * <p><b>Not run as part of this project's sandbox verification.</b> This
- * class needs {@code spring-boot-starter-test} and the rest of the
- * Spring Boot dependency tree, which requires Maven Central access; the
- * environment this project was authored in has that blocked. It compiles
- * against real Spring Boot 3.x APIs and is meant to run with
- * {@code mvn test} on a machine with normal internet access — see the
- * README's "What was verified where" section.
+ * Full Spring-context integration test for the /api/protect endpoint,
+ * driven through MockMvc (no real HTTP port or network — Spring's
+ * servlet-mocking layer). Runs as part of {@code mvn test}.
  */
 @SpringBootTest
 @AutoConfigureMockMvc

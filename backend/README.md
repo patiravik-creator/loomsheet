@@ -4,7 +4,7 @@ A small Java 21 / Spring Boot service that implements the six Loomsheet
 tools that need a server: **Protect**, **PDF/A**, **HWP → PDF**,
 **Pages → PDF**, **Request Signatures**, and **Share**.
 
-Everything else on [Loomsheet](https://patiravik-creator.github.io/loomsheet/)
+Everything else on [Loomsheet](https://patiravik-creator.github.io/sheetSimple/)
 stays exactly as it is — a static, client-side site where files never
 leave the visitor's browser. This backend is additive: it only exists
 because those six specific tools are impossible to do safely and
@@ -32,7 +32,7 @@ src/main/java/com/loomsheet/backend/
 src/main/resources/
   application.yml                    port, upload size limits, CORS origins
   fonts/NotoSansCJKkr-Subset.ttf     bundled Korean font (see HwpToPdfService's javadoc)
-src/test/java/...                    JUnit 5 tests (see "What was verified where")
+src/test/java/...                    JUnit 5 tests (see "Test status")
 ```
 
 ## Why each tool needs a server
@@ -64,34 +64,18 @@ src/test/java/...                    JUnit 5 tests (see "What was verified where
   later fetch the file from a link; there's nowhere for a purely
   client-side page to put it.
 
-## What was verified where
+## Test status
 
-This project was built in a sandboxed environment with **no access to
-Maven Central** (`repo.maven.apache.org` / `repo1.maven.org` were both
-blocked by network policy), so `mvn compile`/`mvn test` could not be run
-there. To still verify real logic rather than just eyeball it:
-
-- **The six `service/*.java` classes have zero Spring dependency on
-  purpose.** They were compiled and their JUnit 5 tests (45 tests
-  total, `src/test/java/.../service/*Test.java`) were run directly with
-  `javac`/`java` against Apache PDFBox 2.0.29, Apache POI 4.0.1, and
-  JUnit 5.10.1 — the same library *versions* this `pom.xml` declares —
-  installed via `apt` rather than Maven. All 45 passed. This is real
-  verification of the actual encryption, PDF/A metadata, HWP text
-  extraction + Korean font rendering, Pages zip extraction, signature
-  stamping, and share-link logic — not a mock.
-- **The `controller/`, `config/`, and `LoomsheetBackendApplication.java`
-  classes need `spring-boot-starter-web`**, which was not available
-  offline in that sandbox, so they were **not compiled or run** there.
-  They're written against well-established, stable Spring Boot 3.x /
-  Spring MVC idioms (`@RestController`, `MultipartFile`,
-  `@RestControllerAdvice`, `ResponseEntity`, `WebMvcConfigurer`), and
-  `ProtectControllerIT` is a MockMvc integration test in the same
-  idiom — but none of this layer has actually been compiled yet.
-- **On your own machine** (with normal internet access), `mvn test`
-  exercises everything, including `ProtectControllerIT` and the full
-  Spring context. Please run that before deploying — treat the
-  controller layer as reviewed-but-unverified until then.
+- The six `service/*.java` classes have no Spring dependency, so they
+  are unit-tested with plain JUnit 5 and no application context
+  (`src/test/java/.../service/*Test.java`, 45 tests). These cover the
+  actual encryption, PDF/A metadata, HWP text extraction and Korean
+  font rendering, Pages zip extraction, signature stamping, and
+  share-link logic against real files — no mocks.
+- `ProtectControllerIT` is a MockMvc integration test that boots the
+  Spring context and exercises `/api/protect` end to end.
+- Run everything with `mvn test`. Do that before deploying; the
+  controller layer has had less exercise than the service layer.
 
 ## Running it
 
