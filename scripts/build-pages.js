@@ -138,7 +138,7 @@ function toolPage(indexHtml, t, site, allSlugs, tools, tc) {
   const before = index;
   for (const t of live) index = index.replace(new RegExp(`href="#${t.id}"`, "g"), `href="${t.slug}/"`);
   index = index.replace(/href="#"(?![^>]*id="foot-personalize")/g, 'href="./"');
-  const leftover = [...index.matchAll(/href="#([a-z0-9-]+)"/g)].map((m) => m[1]).filter((id) => !live.some((t) => t.id === id));
+  const leftover = [...index.matchAll(/href="#([a-z0-9-]+)"/g)].map((m) => m[1]).filter((id) => id !== "main" && !live.some((t) => t.id === id));
   if (leftover.length) console.warn("index.html links to tools that don't exist or aren't available: " + leftover.join(", "));
   if (index !== before && !DRY) fs.writeFileSync(indexPath, index);
 

@@ -101,7 +101,7 @@ const ok = (name, pass, detail = "") => { results.push({ name, pass }); console.
   await page.click("#menu-btn");
   const collapsed = await page.evaluate(() => [...document.querySelectorAll(".mega-cat .mega-panel")].every((p) => p.hidden));
   await page.click(".mega-cat .mega-head:has-text('Convert')");
-  const conv = await page.evaluate(() => { const r = document.querySelector(".mega-cat[data-open]"); return r ? { label: r.querySelector(".mega-head span").textContent, groups: r.querySelectorAll(".mega-group h4").length, links: r.querySelectorAll("a").length } : null; });
+  const conv = await page.evaluate(() => { const r = document.querySelector(".mega-cat[data-open]"); return r ? { label: r.querySelector(".mega-head span").textContent, groups: r.querySelectorAll(".mega-group .mega-label").length, links: r.querySelectorAll("a").length } : null; });
   await page.click(".mega-cat .mega-head:has-text('Edit')");
   const openNow = await page.$$eval(".mega-cat[data-open] .mega-head span:first-of-type", (e) => e.map((x) => x.textContent));
   ok("All-tools categories start collapsed", collapsed);

@@ -1,5 +1,5 @@
 :root{
-    --paper:#F5F6F8; --sheet:#FFFFFF; --ink:#16202B; --ink-2:#4A5666; --ink-3:#8A94A2;
+    --paper:#F5F6F8; --sheet:#FFFFFF; --ink:#16202B; --ink-2:#4A5666; --ink-3:#68707C;
     --rule:#D9DEE5; --accent:#1F4BD8; --accent-ink:#FFFFFF; --ok:#1E7A4E; --bad:#B42318;
     --hero-a:#EEF2FF; --hero-b:#F7F3FF; --hero-c:#EEF9F3; --hero-rule:#E3E8F3; --shadow:rgba(20,30,50,.08); --stage:#E6E9EE;
     color-scheme:light;
@@ -17,8 +17,11 @@
   html[data-theme=dark] .ic{color:#0B1220}
   html[data-theme=dark] .pagewrap,html[data-theme=dark] .thumb canvas,html[data-theme=dark] .reader canvas{background:#fff}
   html[data-theme=dark] .sheet[data-cc] .btn:not(.quiet){color:#0B1220}
-  html[data-theme=dark] .btn{color:#0B1220}
+  html[data-theme=dark] .btn:not(.quiet){color:#0B1220}
   html[data-theme=dark] .cam .shutter{background:#fff}
+  /* 2.4.1 Bypass Blocks: off-screen until focused, then pinned to the top-left. */
+  .skip-link{position:absolute;left:-9999px;top:0;z-index:100;background:var(--accent);color:var(--accent-ink);padding:10px 16px;border-radius:0 0 8px 0;text-decoration:none;font-weight:600}
+  .skip-link:focus{left:0}
   *{box-sizing:border-box}
   html{scroll-behavior:smooth}
   body{transition:background .2s,color .2s}
@@ -60,7 +63,7 @@
   .dd::before{content:"";position:absolute;left:0;right:0;top:-8px;height:8px}
   .nav-item:hover>.dd,.nav-item:focus-within>.dd{display:flex;gap:6px}
   .dd-group{min-width:210px}
-  .dd h5{margin:6px 10px 4px;font-size:12px;font-weight:600;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em}
+  .dd-label{margin:6px 10px 4px;font-size:12px;font-weight:600;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em}
   .dd a{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:7px;color:var(--ink);text-decoration:none;font-size:14.5px;white-space:nowrap;transition:background-color .12s,color .12s}
   .dd a:hover,.dd a:focus-visible{background:var(--paper);color:var(--accent)}
   .dd a[data-current]{background:color-mix(in srgb,var(--accent) 12%,var(--sheet));color:var(--accent);font-weight:600}
@@ -85,7 +88,7 @@
   .mega-panel{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:2px 18px;padding:2px 6px 14px 28px;animation:mega-in .16s ease-out}
   .mega-panel[hidden]{display:none}
   .mega-group{display:contents}
-  .mega h4{grid-column:1/-1;margin:10px 0 4px;font-size:12px;font-weight:600;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em}
+  .mega-label{grid-column:1/-1;margin:10px 0 4px;font-size:12px;font-weight:600;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em}
   .mega a{display:flex;align-items:center;gap:8px;color:var(--ink);text-decoration:none;padding:5px 6px;border-radius:6px;font-size:15px;transition:color .15s,background-color .15s}
   .mega a:hover,.mega a:focus-visible{color:var(--accent);background:var(--paper)}
   .mega .ic{width:22px;height:22px;border-radius:6px}.mega .ic svg{width:13px;height:13px;stroke-width:2.2}
@@ -93,7 +96,13 @@
   .wrap{max-width:1100px;margin:0 auto;padding:36px 24px 80px}
 
   /* category colours */
+  /* Category identity colours, used for icon chips, dots and borders. */
   :root{--c-compress:#D9432F;--c-from:#E0851B;--c-to:#2E9E5B;--c-org:#6B4FD8;--c-edit:#1F8FB5;--c-sign:#C0398A;--c-protect:#B8642A;--c-ai:#1F4BD8;--c-scan:#3A8F6B}
+  /* Same hues, darkened just enough that white button text clears 4.5:1 (WCAG 1.4.3). Six of the nine
+     identity colours are too light to carry white text; these are used only as a button background. */
+  :root{--cb-compress:#D73C27;--cb-from:#A96514;--cb-to:#27844C;--cb-org:#6B4FD8;--cb-edit:#1B7E9F;--cb-sign:#C0398A;--cb-protect:#B05F28;--cb-ai:#1F4BD8;--cb-scan:#358261}
+  /* In dark mode the button carries dark text on the lighter category colour, which already clears 4.5:1. */
+  html[data-theme=dark]{--cb-compress:var(--c-compress);--cb-from:var(--c-from);--cb-to:var(--c-to);--cb-org:var(--c-org);--cb-edit:var(--c-edit);--cb-sign:var(--c-sign);--cb-protect:var(--c-protect);--cb-ai:var(--c-ai);--cb-scan:var(--c-scan)}
   .ic{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;flex:none;color:#fff}
   .ic svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
   /* home */
@@ -110,7 +119,7 @@
   .popular a{display:inline-flex;align-items:center;gap:8px;background:var(--sheet);border:1px solid var(--rule);border-radius:999px;padding:6px 12px 6px 6px;text-decoration:none;color:var(--ink);font-size:14px;font-weight:500}
   .popular a:hover{border-color:var(--accent)}
   .popular .ic{width:26px;height:26px;border-radius:7px}.popular .ic svg{width:15px;height:15px}
-  .link-btn{background:none;border:none;color:var(--accent);cursor:pointer;padding:0;margin-top:14px;font-size:14px;text-decoration:underline;text-underline-offset:3px;position:relative}
+  .link-btn{background:none;border:none;color:var(--accent);cursor:pointer;padding:4px 2px;min-height:24px;margin-top:10px;font-size:14px;text-decoration:underline;text-underline-offset:3px;position:relative}
   .pz{margin-top:16px;padding:18px;background:var(--sheet);border:1px solid var(--rule);border-radius:10px;display:grid;gap:12px;max-width:520px;position:relative}
   .pz[hidden]{display:none}
   .pz .field input{font:inherit;padding:8px 10px;border:1px solid var(--rule);border-radius:6px;background:var(--paper);color:var(--ink);width:100%}
@@ -129,14 +138,14 @@
   .sig-saved img{height:44px;max-width:180px;object-fit:contain;background:#fff;border-radius:4px;padding:2px}
   .foot-note a{color:var(--ink-2)}
   .cat{margin-bottom:30px}
-  .cat h3{font-size:15px;font-weight:600;color:var(--ink);margin:0 0 12px;display:flex;align-items:center;gap:10px}
-  .cat h3 i{width:10px;height:10px;border-radius:3px;display:inline-block}
+  .cat h2{font-size:15px;font-weight:600;color:var(--ink);margin:0 0 12px;display:flex;align-items:center;gap:10px}
+  .cat h2 i{width:10px;height:10px;border-radius:3px;display:inline-block}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
   .card{display:flex;gap:14px;align-items:flex-start;background:var(--sheet);border:1px solid var(--rule);border-radius:10px;padding:14px;text-decoration:none;color:var(--ink);transition:transform .12s,box-shadow .12s,border-color .12s}
   .card:hover{border-color:var(--cc);box-shadow:0 6px 18px var(--shadow);transform:translateY(-1px)}
   .card b{display:block;font-weight:600;margin-bottom:2px}
   .card span{font-size:14px;color:var(--ink-2);line-height:1.4}
-  .card.na{opacity:.55;cursor:default}
+  .card.na{opacity:.8;cursor:default}
   .card.na:hover{border-color:var(--rule);box-shadow:none;transform:none}
   .card.na .ic{background:var(--ink-3)!important}
   .no-match{color:var(--ink-2);padding:20px 0}
@@ -149,17 +158,18 @@
   .crumb-current{color:var(--ink)}
   .crumbs a{color:var(--ink-2);text-decoration:none}.crumbs a:hover{color:var(--accent)}
   .sheet{background:var(--sheet);border:1px solid var(--rule);border-radius:var(--radius);padding:32px;max-width:900px}
-  .sheet h2{font-size:24px;font-weight:650;margin:0 0 4px;letter-spacing:-.01em}
+  .sheet h1{font-size:24px;font-weight:650;margin:0 0 4px;letter-spacing:-.01em}
+  .sheet h2{font-size:19px;font-weight:650;margin:0 0 4px;letter-spacing:-.01em}
   .tool-head{display:flex;gap:14px;align-items:center;margin-bottom:6px}
   .tool-head .ic{width:46px;height:46px;border-radius:12px}.tool-head .ic svg{width:26px;height:26px}
-  .tool-head h2{margin:0}
+  .tool-head h1{margin:0}
   .sheet .lede{color:var(--ink-2);margin:0 0 24px;max-width:62ch}
 
   /* tool page: intro, steps, questions, related tools (assets/tool-content.js) */
   .tool-info{max-width:900px;display:grid;gap:22px}
   .tool-intro{margin:0 0 18px;gap:14px}
   .tool-more{margin:22px 0 0}
-  .tool-info h3{margin:0 0 10px;font-size:15px;font-weight:650;letter-spacing:.01em;color:var(--ink)}
+  .tool-info h2{margin:0 0 10px;font-size:15px;font-weight:650;letter-spacing:.01em;color:var(--ink)}
   .tool-info p{margin:0;color:var(--ink-2);line-height:1.6}
   .ti-badge{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:var(--radius);background:color-mix(in srgb,var(--ok) 10%,var(--sheet));border:1px solid color-mix(in srgb,var(--ok) 35%,var(--rule));color:var(--ink-2);font-size:14px}
   .ti-badge b{color:var(--ink)}
@@ -244,7 +254,7 @@
   .btn:disabled{background:var(--ink-3);box-shadow:none;transform:none;filter:none;cursor:default}
   .btn.quiet{background:var(--sheet);color:var(--ink);border:1px solid var(--rule);box-shadow:none}
   .btn.quiet:hover{background:var(--paper);border-color:var(--ink-3);filter:none;transform:none}
-  .sheet[data-cc] .btn:not(.quiet){background:var(--cc);box-shadow:0 2px 0 rgba(0,0,0,.12),0 6px 16px color-mix(in srgb,var(--cc) 30%,transparent)}
+  .sheet[data-cc] .btn:not(.quiet){background:var(--ccb,var(--cc));box-shadow:0 2px 0 rgba(0,0,0,.12),0 6px 16px color-mix(in srgb,var(--cc) 30%,transparent)}
   .sheet[data-cc] .btn:disabled{background:var(--ink-3);box-shadow:none}
   .sheet[data-cc] .choice label:has(input:checked){border-color:var(--cc);box-shadow:inset 0 0 0 1px var(--cc)}
   .sheet[data-cc] .drop:hover,.sheet[data-cc] .drop.over{border-color:var(--cc);background:color-mix(in srgb,var(--cc) 6%,#fff)}
@@ -334,9 +344,10 @@
   .foot-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:24px;max-width:900px}
   .foot-grid b{display:block;color:var(--ink);margin-bottom:8px}
   .foot-grid p{margin:0;max-width:44ch}
-  .foot-grid a{display:block;color:var(--ink-2);text-decoration:none;padding:3px 0}
+  .foot-grid a{display:block;color:var(--ink-2);text-decoration:none;padding:6px 0;min-height:24px}
   .foot-grid a:hover{color:var(--accent)}
   .foot-note{margin:22px 0 0}
+  .foot-note a{display:inline-block;padding:4px 2px;min-height:24px}
   .progress{height:4px;background:var(--rule);border-radius:2px;overflow:hidden;margin-top:10px;display:none}
   .progress[data-on]{display:block}
   .progress i{display:block;height:100%;width:0;background:var(--cc,var(--accent));transition:width .2s}

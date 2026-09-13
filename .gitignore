@@ -1,6 +1,7 @@
 # test artifacts
 tests/node_modules/
 tests/results.json
+tests/a11y-results.json
 tests/server.log
 tests/playwright-report/
 tests/vendor/

@@ -91,7 +91,7 @@ It reads the tool list from the running app, writes one `index.html` per tool (i
 
 ## Tests
 
-`tests/` holds a Playwright suite that runs every tool in a real browser: `regression.js` exercises each one end to end, `output-checks.js` reads the produced files back to verify their contents, and `tool-pages.js` checks the generated pages. It runs on every push via GitHub Actions; locally:
+`tests/` holds a Playwright suite that runs every tool in a real browser: `regression.js` exercises each one end to end, `output-checks.js` reads the produced files back to verify their contents, `tool-pages.js` checks the generated pages, and `a11y.js` audits accessibility with axe-core (WCAG 2.1 A/AA, both themes, desktop and phone, plus keyboard and focus checks it makes itself). It runs on every push via GitHub Actions; locally:
 
 ```bash
 cd tests && npm install

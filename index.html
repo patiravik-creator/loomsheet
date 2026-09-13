@@ -28,7 +28,8 @@
 <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
-<div class="bar">
+<header class="bar">
+  <a class="skip-link" href="#main">Skip to content</a>
   <div class="bar-in">
     <a class="brand" href="./" aria-label="Loomsheet home"><svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect x="7" y="5" width="15" height="19" rx="2" transform="rotate(-8 14 14)" opacity=".35"/><rect x="10" y="7" width="15" height="19" rx="2" transform="rotate(5 17 16)" opacity=".6"/><rect x="9" y="8" width="15" height="19" rx="2"/><path d="M13 14h7M13 18h7M13 22h4" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg><span>Loomsheet</span></a>
     <button class="menu-btn" id="menu-btn" aria-expanded="false">All tools</button>
@@ -39,9 +40,10 @@
     <button class="icon-btn theme" id="theme-btn" title="Switch light / dark" aria-label="Switch light or dark theme"><svg viewBox="0 0 24 24"><path class="sun" d="M12 4V2M12 22v-2M4 12H2M22 12h-2M5.6 5.6 4.2 4.2M19.8 19.8l-1.4-1.4M5.6 18.4l-1.4 1.4M19.8 4.2l-1.4 1.4"/><circle class="sun" cx="12" cy="12" r="4"/><path class="moon" d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button>
   </div>
   <div class="mega" id="mega"><div class="mega-in" id="mega-in"></div></div>
-</div>
+</header>
 
 <div class="wrap">
+  <main id="main">
   <div class="tool" id="home" data-active>
     <div class="hero">
       <h1 id="hero-title">Welcome to Loomsheet. What can we do with your PDF today?</h1>
@@ -63,6 +65,7 @@
     <div id="home-grid"></div>
   </div>
   <div id="tools"></div>
+  </main>
   <footer>
     <div class="foot-grid">
       <div><b>Loomsheet</b><p>Free PDF tools that run in your browser. Nothing is uploaded; close the tab and everything is gone. Very large files depend on your device's memory.</p></div>

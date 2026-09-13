@@ -480,8 +480,8 @@ window.renderToolIntro = function (t) {
   <p class="ti-badge">${lock}<b>Runs on your device.</b> Your file is never uploaded \u2014 it's processed in this tab and gone when you close it.</p>
   <button class="ti-toggle" type="button" aria-expanded="false"><span>About ${esc(t.name)} &amp; how it works</span><i class="chev"></i></button>
   <div class="ti-grid">
-    <div class="ti-about"><h3>About ${esc(t.name)}</h3><p>${esc(c.intro)}</p></div>
-    <div class="ti-steps"><h3>How it works</h3><ol>${c.steps.map((s, i) => `<li><span>${i + 1}</span>${esc(s)}</li>`).join("")}</ol></div>
+    <div class="ti-about"><h2>About ${esc(t.name)}</h2><p>${esc(c.intro)}</p></div>
+    <div class="ti-steps"><h2>How it works</h2><ol>${c.steps.map((s, i) => `<li><span>${i + 1}</span>${esc(s)}</li>`).join("")}</ol></div>
   </div>
 </section>`;
 };
@@ -491,8 +491,8 @@ window.renderToolMore = function (t, tools, opts) {
   const esc = _escTC;
   const related = (c.related || []).map((id) => tools.find((x) => x.id === id)).filter((x) => x && !x.na && !x.hidden);
   return `<section class="tool-info tool-more" data-tool-info="${esc(t.id)}">
-  <div class="ti-faq"><h3>Common questions</h3>${c.faq.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join("")}</div>
-  ${related.length ? `<div class="ti-related"><h3>Often used next</h3><div class="ti-cards">${related.map((r) => `<a href="${esc(opts.link(r))}">${opts.icon ? opts.icon(r) : ""}<span class="ti-card-text"><b>${esc(r.name)}</b><span>${esc(r.desc)}</span></span></a>`).join("")}</div></div>` : ""}
+  <div class="ti-faq"><h2>Common questions</h2>${c.faq.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join("")}</div>
+  ${related.length ? `<div class="ti-related"><h2>Often used next</h2><div class="ti-cards">${related.map((r) => `<a href="${esc(opts.link(r))}">${opts.icon ? opts.icon(r) : ""}<span class="ti-card-text"><b>${esc(r.name)}</b><span>${esc(r.desc)}</span></span></a>`).join("")}</div></div>` : ""}
 </section>`;
 };
 window.renderToolInfo = (t, tools, opts) => window.renderToolIntro(t) + window.renderToolMore(t, tools, opts);

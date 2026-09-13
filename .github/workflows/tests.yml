@@ -62,6 +62,10 @@ jobs:
         if: always()
         run: node tool-pages.js
 
+      - name: Accessibility audit (WCAG 2.1 AA)
+        if: always()
+        run: node a11y.js
+
       - name: Verify generated tool pages are up to date
         if: always()
         run: |
@@ -79,5 +83,6 @@ jobs:
           name: regression-results
           path: |
             tests/results.json
+            tests/a11y-results.json
             tests/server.log
           if-no-files-found: ignore

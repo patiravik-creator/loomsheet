@@ -155,7 +155,7 @@ function statusBox(root){ return { set:(m,c="")=>{ const s=$(".actions .status",
 
 function dropZone({multi=false, accept="application/pdf", label="Drop a PDF here or click to choose", sub="One file", filter=isPdf, badMsg="That isn't a PDF. Choose a .pdf file.", onChange}){
   const wrap = el("div");
-  const d = el("div",{class:"drop"},`<input type="file" ${multi?"multiple":""} accept="${accept}"><div class="stack"><i></i><i></i><i></i></div><strong>${label}</strong><span>${sub}</span>`);
+  const d = el("div",{class:"drop"},`<input type="file" ${multi?"multiple":""} accept="${accept}" aria-label="${esc(label)}"><div class="stack"><i></i><i></i><i></i></div><strong>${label}</strong><span>${sub}</span>`);
   const ul = el("ul",{class:"files"}); const msg = el("div",{class:"status"}); msg.style.marginTop="8px";
   wrap.append(d,ul,msg);
   let files=[];
@@ -186,14 +186,27 @@ function dropZone({multi=false, accept="application/pdf", label="Drop a PDF here
 }
 const choice = (name, opts, checked=0) => `<div class="choice">${opts.map(([v,l],i)=>`<label><input type="radio" name="${name}" value="${v}" ${i===checked?"checked":""}> ${l}</label>`).join("")}</div>`;
 const picked = (root,name) => $(`input[name=${name}]:checked`,root)?.value;
+// Gives any unlabelled control an aria-label taken from the nearest visible label text.
+function labelControls(root){
+  for(const c of $$("input,select,textarea",root)){
+    if(c.type==="hidden" || c.getAttribute("aria-label") || c.getAttribute("aria-labelledby") || c.id && $(`label[for="${c.id}"]`,root)) continue;
+    if(c.closest("label")) continue;                       // already wrapped in one
+    let text = c.closest(".range")?.querySelector("span,label")?.textContent
+            || c.closest(".field")?.querySelector("label")?.textContent
+            || c.previousElementSibling?.textContent;
+    text = (text||"").trim().replace(/\s+/g," ");
+    if(text) c.setAttribute("aria-label", text);
+  }
+}
 function runButton(root, label, fn){
   const btn=$("[data-run]",root); btn.textContent=label;
   btn.onclick = async () => { btn.disabled=true; const st=statusBox(root); st.hide(); st.clear(); try{ await fn(st); }catch(e){ console.error(e); st.set(e.message||String(e),"bad"); } btn.disabled=false; };
   return btn;
 }
-const shell = (title, lede, inner) => `<h2>${title}</h2><p class="lede">${lede}</p>${inner}<div class="actions"><button class="btn" data-run disabled>Run</button><span class="status"></span></div><div class="progress"><i></i></div><div class="result"></div>`;
+const shell = (title, lede, inner) => `<h1>${title}</h1><p class="lede">${lede}</p>${inner}<div class="actions"><button class="btn" data-run disabled>Run</button><span class="status" role="status" aria-live="polite"></span></div><div class="progress"><i></i></div><div class="result"></div>`;
 
 /* ---------- icons + colours ---------- */
+const CAT_BTN={"Compress":"var(--cb-compress)","Convert from PDF":"var(--cb-from)","Convert to PDF":"var(--cb-to)","Organize":"var(--cb-org)","Edit":"var(--cb-edit)","Fill & Sign":"var(--cb-sign)","Protect":"var(--cb-protect)","AI":"var(--cb-ai)","Scan":"var(--cb-scan)","About":"var(--accent)"};
 const CAT_COLOR={"Compress":"var(--c-compress)","Convert from PDF":"var(--c-from)","Convert to PDF":"var(--c-to)","Organize":"var(--c-org)","Edit":"var(--c-edit)","Fill & Sign":"var(--c-sign)","Protect":"var(--c-protect)","AI":"var(--c-ai)","Scan":"var(--c-scan)","About":"var(--ink-2)"};
 const G={
   compress:'<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 12h6M12 9v6"/><path d="m9 15 3 3 3-3" opacity=".0"/>',
@@ -262,8 +275,8 @@ function buildNav(){
     $(".dd",item)?.remove();
     const groups=item.dataset.cats.split("|").map(c=>({cat:c,tools:TOOLS.filter(t=>t.cat===c && usable(t))})).filter(g=>g.tools.length);
     if(!groups.length) return;
-    const html=groups.map(g=>`<div class="dd-group">${groups.length>1?`<h5>${esc(g.cat)}</h5>`:""}${g.tools.map(t=>`<a href="${toolUrl(t)}">${icon(t)}<span>${esc(t.name)}</span></a>`).join("")}</div>`).join("");
-    item.insertAdjacentHTML("beforeend",`<div class="dd" role="menu">${html}</div>`);
+    const html=groups.map(g=>`<div class="dd-group">${groups.length>1?`<p class="dd-label">${esc(g.cat)}</p>`:""}${g.tools.map(t=>`<a href="${toolUrl(t)}">${icon(t)}<span>${esc(t.name)}</span></a>`).join("")}</div>`).join("");
+    item.insertAdjacentHTML("beforeend",`<div class="dd">${html}</div>`);
     const a=$(":scope > a",item); a.setAttribute("aria-haspopup","true"); a.setAttribute("aria-expanded","false");
   });
 }
@@ -278,10 +291,11 @@ function showTool(id){
   if(!usable(t)){ $("#home").setAttribute("data-active",""); window.scrollTo(0,0); document.title="Loomsheet — every PDF tool, right in your browser"; $('link[rel=canonical]')?.setAttribute("href", ROOT); return; }
   let sec = $("#tool-"+id);
   if(!sec){
-    sec = el("section",{class:"tool",id:"tool-"+id},`<div class="crumbs"><a href="${ROOT}" data-cat-crumb="${esc(t.cat)}">${esc(t.cat)}</a> / <span class="crumb-current">${esc(t.name)}</span><span class="crumb-actions"><button class="btn quiet share-btn fav-btn" data-favtool="${id}" ${isFav(id)?"data-on":""}>${isFav(id)?"★ Favorited":"☆ Favorite"}</button><button class="btn quiet share-btn" data-share>Share</button></span></div><div class="sheet" data-cc style="--cc:${CAT_COLOR[t.cat]}"></div>`);
+    sec = el("section",{class:"tool",id:"tool-"+id},`<div class="crumbs"><a href="${ROOT}" data-cat-crumb="${esc(t.cat)}">${esc(t.cat)}</a> / <span class="crumb-current">${esc(t.name)}</span><span class="crumb-actions"><button class="btn quiet share-btn fav-btn" data-favtool="${id}" ${isFav(id)?"data-on":""}>${isFav(id)?"★ Favorited":"☆ Favorite"}</button><button class="btn quiet share-btn" data-share>Share</button></span></div><div class="sheet" data-cc style="--cc:${CAT_COLOR[t.cat]};--ccb:${CAT_BTN[t.cat]||CAT_COLOR[t.cat]}"></div>`);
     $("[data-share]",sec).onclick=()=>shareTool(t); $("[data-favtool]",sec).onclick=()=>toggleFav(id);
     $("#tools").appendChild(sec); const sh=$(".sheet",sec); t.build(sh, t);
-    const h2=$("h2",sh); if(h2){ const head=el("div",{class:"tool-head"},icon(t)); h2.replaceWith(head); head.appendChild(h2); }
+    const h1=$("h1",sh); if(h1){ const head=el("div",{class:"tool-head"},icon(t)); h1.replaceWith(head); head.appendChild(h1); }
+    labelControls(sh);
     restorePrefs(sh,id);
     // Intro, steps, questions and related tools (assets/tool-content.js) under the tool.
     if(window.renderToolIntro){ const intro=renderToolIntro(t), more=renderToolMore(t, TOOLS, {link:toolUrl, icon}); if(intro) sh.insertAdjacentHTML("beforebegin", intro); if(more) sh.insertAdjacentHTML("afterend", more); }
@@ -297,19 +311,19 @@ function buildHome(filter=""){
     const groups=cats.map(c=>({cat:c,tools:TOOLS.filter(t=>t.cat===c && usable(t))})).filter(g=>g.tools.length); if(!groups.length) continue;
     const n=groups.reduce((a,g)=>a+g.tools.length,0), color=CAT_COLOR[cats[0]];
     const row=el("div",{class:"mega-cat","data-cats":cats.join("|")},`<button class="mega-head" type="button" aria-expanded="false"><i class="dot" style="background:${color}"></i><span>${esc(label)}</span><span class="count">${n}</span><i class="chev"></i></button>
-      <div class="mega-panel" hidden>${groups.map(g=>`<div class="mega-group">${groups.length>1?`<h4>${esc(g.cat)}</h4>`:""}${g.tools.map(t=>`<a href="${toolUrl(t)}">${icon(t)}${esc(t.name)}</a>`).join("")}</div>`).join("")}</div>`);
+      <div class="mega-panel" hidden>${groups.map(g=>`<div class="mega-group">${groups.length>1?`<p class="mega-label">${esc(g.cat)}</p>`:""}${g.tools.map(t=>`<a href="${toolUrl(t)}">${icon(t)}${esc(t.name)}</a>`).join("")}</div>`).join("")}</div>`);
     $(".mega-head",row).onclick=()=>{ const open=row.hasAttribute("data-open"); $$(".mega-cat[data-open]",m).forEach(r=>{ r.removeAttribute("data-open"); $(".mega-panel",r).hidden=true; $(".mega-head",r).setAttribute("aria-expanded","false"); }); if(!open){ row.setAttribute("data-open",""); $(".mega-panel",row).hidden=false; $(".mega-head",row).setAttribute("aria-expanded","true"); } };
     m.appendChild(row);
   }
   for(const c of CATS){
     let ts = TOOLS.filter(t=>t.cat===c && !t.hidden); if(!ts.length) continue;
     if(f) ts=ts.filter(t=>(t.name+" "+(t.desc||"")+" "+c).toLowerCase().includes(f)); if(!ts.length) continue; any=true;
-    g.appendChild(el("div",{class:"cat"},`<h3><i style="background:${CAT_COLOR[c]}"></i>${c}</h3><div class="grid">${ts.map(cardHtml).join("")}</div>`));
+    g.appendChild(el("div",{class:"cat"},`<h2><i style="background:${CAT_COLOR[c]}"></i>${c}</h2><div class="grid">${ts.map(cardHtml).join("")}</div>`));
   }
   if(!any) g.innerHTML=`<p class="no-match">No tool matches "${esc(filter)}". Try another word, like "merge", "word", or "sign".</p>`;
   const favs=P.favs.map(id=>TOOLS.find(t=>t.id===id)).filter(usable), rec=P.on("recent")?P.recent.map(id=>TOOLS.find(t=>t.id===id)).filter(t=>usable(t)&&!favs.includes(t)):[];
-  $("#fav-section").innerHTML = favs.length && !f ? `<div class="cat recent"><h3><i style="background:#E0A100"></i>Your favorites</h3><div class="grid">${favs.map(cardHtml).join("")}</div></div>` : "";
-  $("#recent-section").innerHTML = rec.length && !f ? `<div class="cat recent"><h3><i style="background:var(--ink-3)"></i>Recently used</h3><div class="grid">${rec.map(cardHtml).join("")}</div></div>` : "";
+  $("#fav-section").innerHTML = favs.length && !f ? `<div class="cat recent"><h2><i style="background:#E0A100"></i>Your favorites</h2><div class="grid">${favs.map(cardHtml).join("")}</div></div>` : "";
+  $("#recent-section").innerHTML = rec.length && !f ? `<div class="cat recent"><h2><i style="background:var(--ink-3)"></i>Recently used</h2><div class="grid">${rec.map(cardHtml).join("")}</div></div>` : "";
   $$("[data-fav]").forEach(b=>b.onclick=e=>{ e.preventDefault(); e.stopPropagation(); toggleFav(b.dataset.fav); });
   greet();
   $("#popular").innerHTML = POPULAR.map(id=>TOOLS.find(t=>t.id===id)).filter(Boolean).map(t=>`<a href="${toolUrl(t)}">${icon(t)}${t.name}</a>`).join("");
@@ -1110,7 +1124,7 @@ reg({ id:"repair", cat:"Protect", name:"Repair PDF", desc:"Rebuild a damaged PDF
 reg({ id:"about", cat:"About", name:"About", desc:"What Loomsheet provides.", build(root){
   const groups = CATS.map(c => ({ cat:c, tools: TOOLS.filter(t=>t.cat===c && usable(t)) })).filter(g=>g.tools.length);
   const list = groups.map(g => `<div class="field"><label>${esc(g.cat)}</label><p style="margin:4px 0 0;color:var(--ink-2)">${g.tools.map(t=>esc(t.name)).join(", ")}</p></div>`).join("");
-  root.innerHTML = `<h2>About</h2>
+  root.innerHTML = `<h1>About</h1>
     <p class="lede">Loomsheet is a free, browser-based PDF toolkit. Every tool below runs entirely on your own device — files are opened, processed, and downloaded right in this tab, nothing is uploaded to a server, and it's all gone the moment you close it. No account, no sign-up, no tracking.</p>
     <div class="options">${list}</div>
     <h2 style="margin-top:28px">How it works</h2>

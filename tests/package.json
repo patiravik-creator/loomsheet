@@ -4,12 +4,14 @@
   "description": "Browser regression tests for the Loomsheet site. Serve the repo root, then `npm test`.",
   "scripts": {
     "serve": "python3 -m http.server 8899 --bind 127.0.0.1 --directory ..",
-    "test": "node regression.js && node output-checks.js && node tool-pages.js",
+    "test": "node regression.js && node output-checks.js && node tool-pages.js && node a11y.js",
     "build-pages": "node ../scripts/build-pages.js",
     "fixtures": "node make_fixtures.js",
-    "prepare-tesseract": "node prepare-tesseract.js"
+    "prepare-tesseract": "node prepare-tesseract.js",
+    "a11y": "node a11y.js"
   },
   "devDependencies": {
+    "axe-core": "4.10.2",
     "docx": "^9.7.1",
     "jpeg-js": "^0.4.4",
     "jszip": "^3.10.2",

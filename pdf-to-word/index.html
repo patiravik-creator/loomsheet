@@ -30,7 +30,8 @@
 <link rel="stylesheet" href="../assets/styles.css">
 </head>
 <body>
-<div class="bar">
+<header class="bar">
+  <a class="skip-link" href="#main">Skip to content</a>
   <div class="bar-in">
     <a class="brand" href="../" aria-label="Loomsheet home"><svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect x="7" y="5" width="15" height="19" rx="2" transform="rotate(-8 14 14)" opacity=".35"/><rect x="10" y="7" width="15" height="19" rx="2" transform="rotate(5 17 16)" opacity=".6"/><rect x="9" y="8" width="15" height="19" rx="2"/><path d="M13 14h7M13 18h7M13 22h4" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/></svg><span>Loomsheet</span></a>
     <button class="menu-btn" id="menu-btn" aria-expanded="false">All tools</button>
@@ -41,9 +42,10 @@
     <button class="icon-btn theme" id="theme-btn" title="Switch light / dark" aria-label="Switch light or dark theme"><svg viewBox="0 0 24 24"><path class="sun" d="M12 4V2M12 22v-2M4 12H2M22 12h-2M5.6 5.6 4.2 4.2M19.8 19.8l-1.4-1.4M5.6 18.4l-1.4 1.4M19.8 4.2l-1.4 1.4"/><circle class="sun" cx="12" cy="12" r="4"/><path class="moon" d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></button>
   </div>
   <div class="mega" id="mega"><div class="mega-in" id="mega-in"></div></div>
-</div>
+</header>
 
 <div class="wrap">
+  <main id="main">
   <div class="tool" id="home" data-active>
     <div class="hero">
       <h1 id="hero-title">Welcome to Loomsheet. What can we do with your PDF today?</h1>
@@ -65,16 +67,17 @@
     <div id="home-grid"></div>
   </div>
   <div id="tools"></div>
+  </main>
   <div data-static-info><section class="tool-info tool-intro" data-tool-info="pdf-to-word">
   <p class="ti-badge"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><b>Runs on your device.</b> Your file is never uploaded — it's processed in this tab and gone when you close it.</p>
   <button class="ti-toggle" type="button" aria-expanded="false"><span>About PDF to Word &amp; how it works</span><i class="chev"></i></button>
   <div class="ti-grid">
-    <div class="ti-about"><h3>About PDF to Word</h3><p>Get the text of a PDF into an editable Word document (.docx) so you can rewrite, reuse or reformat it. The words come across; the page layout doesn't.</p></div>
-    <div class="ti-steps"><h3>How it works</h3><ol><li><span>1</span>Drop in the PDF.</li><li><span>2</span>Press Convert.</li><li><span>3</span>Download the .docx and open it in Word, Google Docs or LibreOffice.</li></ol></div>
+    <div class="ti-about"><h2>About PDF to Word</h2><p>Get the text of a PDF into an editable Word document (.docx) so you can rewrite, reuse or reformat it. The words come across; the page layout doesn't.</p></div>
+    <div class="ti-steps"><h2>How it works</h2><ol><li><span>1</span>Drop in the PDF.</li><li><span>2</span>Press Convert.</li><li><span>3</span>Download the .docx and open it in Word, Google Docs or LibreOffice.</li></ol></div>
   </div>
 </section><section class="tool-info tool-more" data-tool-info="pdf-to-word">
-  <div class="ti-faq"><h3>Common questions</h3><details><summary>Will it look like the original?</summary><p>No — this keeps the text in reading order, not columns, boxes or exact positions. It's meant for editing the content, not recreating the design.</p></details><details><summary>Nothing comes out — the document is empty.</summary><p>The PDF is probably a scan (pictures of pages). Run PDF OCR first to recognise the text, then convert.</p></details><details><summary>Are pictures included?</summary><p>No, only text. Use Extract Images to pull the pictures out separately.</p></details></div>
-  <div class="ti-related"><h3>Often used next</h3><div class="ti-cards"><a href="../pdf-ocr/"><span class="ti-card-text"><b>PDF OCR</b><span>Recognize text in scanned PDFs and make them searchable.</span></span></a><a href="../word-to-pdf/"><span class="ti-card-text"><b>Word to PDF</b><span>Convert .docx files.</span></span></a><a href="../pdf-to-excel/"><span class="ti-card-text"><b>PDF to Excel</b><span>Detects rows and columns into a spreadsheet.</span></span></a><a href="../pdf-converter/"><span class="ti-card-text"><b>PDF Converter</b><span>Turn a PDF into images, text, Word, Excel, PowerPoint, or HTML.</span></span></a></div></div>
+  <div class="ti-faq"><h2>Common questions</h2><details><summary>Will it look like the original?</summary><p>No — this keeps the text in reading order, not columns, boxes or exact positions. It's meant for editing the content, not recreating the design.</p></details><details><summary>Nothing comes out — the document is empty.</summary><p>The PDF is probably a scan (pictures of pages). Run PDF OCR first to recognise the text, then convert.</p></details><details><summary>Are pictures included?</summary><p>No, only text. Use Extract Images to pull the pictures out separately.</p></details></div>
+  <div class="ti-related"><h2>Often used next</h2><div class="ti-cards"><a href="../pdf-ocr/"><span class="ti-card-text"><b>PDF OCR</b><span>Recognize text in scanned PDFs and make them searchable.</span></span></a><a href="../word-to-pdf/"><span class="ti-card-text"><b>Word to PDF</b><span>Convert .docx files.</span></span></a><a href="../pdf-to-excel/"><span class="ti-card-text"><b>PDF to Excel</b><span>Detects rows and columns into a spreadsheet.</span></span></a><a href="../pdf-converter/"><span class="ti-card-text"><b>PDF Converter</b><span>Turn a PDF into images, text, Word, Excel, PowerPoint, or HTML.</span></span></a></div></div>
 </section></div>
   <footer>
     <div class="foot-grid">
