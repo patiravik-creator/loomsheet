@@ -29,7 +29,29 @@ function parseRanges(str, max){
 const pagesFrom = (str,n) => str.trim() ? parseRanges(str,n).flatMap(r=>idx(r.from,r.to).map(i=>i+1)) : idx(1,n).map(i=>i+1);
 const isPdf = f => f.type==="application/pdf" || /\.pdf$/i.test(f.name);
 const loadPdfjs = async buf => pdfjsLib.getDocument({data:buf.slice(0)}).promise;
-const loadLib = async (buf) => PDFDocument.load(buf.slice(0),{ignoreEncryption:true});
+const loadLib = async (buf) => { try{ return await PDFDocument.load(buf.slice(0),{ignoreEncryption:true}); }catch(e){ throw new Error(/encrypt/i.test(e.message)?"This PDF is password-protected. Use Unlock PDF first.":"This file couldn't be read as a PDF. It may be damaged — try Repair PDF."); } };
+
+/* ---------- theme ---------- */
+const store = { get:k=>{ try{ return localStorage.getItem(k); }catch{ return null; } }, set:(k,v)=>{ try{ localStorage.setItem(k,v); }catch{} } };
+function applyTheme(t){ document.documentElement.setAttribute("data-theme",t); }
+applyTheme(store.get("theme") || (matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"));
+$("#theme-btn").onclick = () => { const t=document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark"; applyTheme(t); store.set("theme",t); };
+
+/* ---------- lazy libraries (loaded only when a tool needs them) ---------- */
+const LIBS = { mammoth:"https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js", XLSX:"https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js", Tesseract:"https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/tesseract.min.js" };
+const libLoading = {};
+function need(name){ if(window[name]) return Promise.resolve(window[name]); return libLoading[name] ||= new Promise((res,rej)=>{ const s=document.createElement("script"); s.src=LIBS[name]; s.onload=()=>res(window[name]); s.onerror=()=>{ delete libLoading[name]; rej(new Error("Couldn't load a required library. Check your connection and try again.")); }; document.head.appendChild(s); }); }
+
+/* ---------- toast + share ---------- */
+const toastEl = el("div",{class:"toast"}); document.body.appendChild(toastEl); let toastT;
+function toast(msg){ toastEl.textContent=msg; toastEl.setAttribute("data-on",""); clearTimeout(toastT); toastT=setTimeout(()=>toastEl.removeAttribute("data-on"),2200); }
+async function shareTool(t){ const url=location.origin+location.pathname+"#"+t.id, data={title:`${t.name} — SheetSimple`,text:t.desc,url};
+  if(navigator.share){ try{ await navigator.share(data); return; }catch{} }
+  try{ await navigator.clipboard.writeText(url); toast("Link copied"); }catch{ prompt("Copy this link:",url); } }
+document.addEventListener("keydown", e => { if(e.key==="Escape"){ $("#mega").removeAttribute("data-open"); $("#menu-btn").setAttribute("aria-expanded","false"); } });
+/* drop a file anywhere on the home page → jump to the right tool */
+document.addEventListener("dragover", e => { if($("#home").hasAttribute("data-active")) e.preventDefault(); });
+document.addEventListener("drop", e => { if(!$("#home").hasAttribute("data-active")) return; e.preventDefault(); const f=e.dataTransfer.files[0]; if(!f) return; location.hash = isPdf(f) ? "organize" : "any-to-pdf"; toast("Drop it again in the box below"); });
 
 async function renderPageCanvas(pdfjsDoc, pno, scale, bg="#fff"){
   const page = await pdfjsDoc.getPage(pno), vp = page.getViewport({scale});
@@ -82,7 +104,7 @@ async function textToPages(doc, text, opts={}){
 }
 
 /* ---------- UI building blocks ---------- */
-function statusBox(root){ return { set:(m,c="")=>{ const s=$(".status",root); s.textContent=m; s.className="status "+c; },
+function statusBox(root){ return { set:(m,c="")=>{ const s=$(".status",root); s.textContent=m; s.className="status "+c; const pm=m.match(/(\d+) of (\d+)/); const p=$(".progress",root); if(p){ if(pm&&!c){ p.setAttribute("data-on",""); $("i",p).style.width=Math.round(+pm[1]/+pm[2]*100)+"%"; } else p.removeAttribute("data-on"); } },
   show:(html)=>{ const r=$(".result",root); r.innerHTML=html; r.setAttribute("data-show",""); },
   hide:()=>$(".result",root)?.removeAttribute("data-show") }; }
 
@@ -124,7 +146,7 @@ function runButton(root, label, fn){
   btn.onclick = async () => { btn.disabled=true; const st=statusBox(root); st.hide(); try{ await fn(st); }catch(e){ console.error(e); st.set(e.message||String(e),"bad"); } btn.disabled=false; };
   return btn;
 }
-const shell = (title, lede, inner) => `<h2>${title}</h2><p class="lede">${lede}</p>${inner}<div class="actions"><button class="btn" data-run disabled>Run</button><span class="status"></span></div><div class="result"></div>`;
+const shell = (title, lede, inner) => `<h2>${title}</h2><p class="lede">${lede}</p>${inner}<div class="actions"><button class="btn" data-run disabled>Run</button><span class="status"></span></div><div class="progress"><i></i></div><div class="result"></div>`;
 
 /* ---------- icons + colours ---------- */
 const CAT_COLOR={"Compress":"var(--c-compress)","Convert from PDF":"var(--c-from)","Convert to PDF":"var(--c-to)","Organize":"var(--c-org)","Edit":"var(--c-edit)","Fill & Sign":"var(--c-sign)","Protect":"var(--c-protect)","AI":"var(--c-ai)","Scan":"var(--c-scan)"};
@@ -174,6 +196,7 @@ const ICON={compress:"compress","pdf-converter":"convert","pdf-to-jpg":"image","
  merge:"merge",split:"split",organize:"organize",rotate:"rotate","delete-pages":"trash","extract-pages":"extract",
  edit:"edit",annotate:"annotate",reader:"reader","number-pages":"number",crop:"crop",redact:"redact",watermark:"watermark","form-filler":"form",share:"share",
  sign:"sign","request-signatures":"request",flatten:"flatten",unlock:"unlock",protect:"lock",
+ "batch-compress":"compress","extract-images":"image","resize-pages":"organize","header-footer":"number",metadata:"form",repair:"flatten",
  ai:"ai",chat:"chat",summarize:"summary",translate:"translate",questions:"quiz",scanner:"scan"};
 const icon = t => `<span class="ic" style="background:${CAT_COLOR[t.cat]}"><svg viewBox="0 0 24 24">${G[ICON[t.id]]||G.pdf}</svg></span>`;
 const POPULAR=["compress","merge","pdf-to-word","edit","sign","scanner","ai"];
@@ -186,14 +209,15 @@ const built = {};
 function showTool(id){
   $$(".tool").forEach(t=>t.removeAttribute("data-active"));
   const t = TOOLS.find(x=>x.id===id);
-  if(!t || t.na){ $("#home").setAttribute("data-active",""); window.scrollTo(0,0); return; }
+  if(!t || t.na){ $("#home").setAttribute("data-active",""); window.scrollTo(0,0); document.title="SheetSimple — every PDF tool, right in your browser"; return; }
   let sec = $("#tool-"+id);
   if(!sec){
-    sec = el("section",{class:"tool",id:"tool-"+id},`<div class="crumbs"><a href="#">All tools</a> / ${t.cat} / ${t.name}</div><div class="sheet" data-cc style="--cc:${CAT_COLOR[t.cat]}"></div>`);
+    sec = el("section",{class:"tool",id:"tool-"+id},`<div class="crumbs"><a href="#">All tools</a> / ${t.cat} / ${t.name}<button class="btn quiet share-btn" data-share>Share</button></div><div class="sheet" data-cc style="--cc:${CAT_COLOR[t.cat]}"></div>`);
+    $("[data-share]",sec).onclick=()=>shareTool(t);
     $("#tools").appendChild(sec); const sh=$(".sheet",sec); t.build(sh, t);
     const h2=$("h2",sh); if(h2){ const head=el("div",{class:"tool-head"},icon(t)); h2.replaceWith(head); head.appendChild(h2); }
   }
-  sec.setAttribute("data-active",""); window.scrollTo(0,0); document.title = t.name+" — SheetSimple";
+  sec.setAttribute("data-active",""); window.scrollTo(0,0); document.title = t.name+" — SheetSimple"; $('meta[name=description]').setAttribute("content", t.desc+" Free, private, runs in your browser.");
 }
 const cardHtml = t => t.na ? `<div class="card na" title="${esc(t.na)}">${icon(t)}<div><b>${t.name}</b><span>${t.na}</span></div></div>` : `<a class="card" href="#${t.id}" style="--cc:${CAT_COLOR[t.cat]}">${icon(t)}<div><b>${t.name}</b><span>${t.desc}</span></div></a>`;
 function buildHome(filter=""){
@@ -391,7 +415,7 @@ function fromPdfTool(id, name, desc, preset){
         bytes=await zip.generateAsync({type:"uint8array"}); name=`${stem}-${mode}.zip`; type="application/zip"; }
       else if(mode==="pptx"){ const ims=[]; for(const p of pages){ st.set(`Rendering page ${p} of ${n}…`); const c=await renderPageCanvas(src,p,Math.min(scale,2)); ims.push({png:await (await canvasBlob(c)).arrayBuffer(),w:c.width,h:c.height}); }
         st.set("Building slides…"); bytes=await buildPptx(ims); name=stem+".pptx"; type="application/vnd.openxmlformats-officedocument.presentationml.presentation"; }
-      else if(mode==="xlsx"){ const wb=XLSX.utils.book_new(); let any=false;
+      else if(mode==="xlsx"){ const XLSX=await need("XLSX"); const wb=XLSX.utils.book_new(); let any=false;
         for(const p of pages){ st.set(`Reading page ${p} of ${n}…`); const rows=await pageRows(await src.getPage(p)); if(rows.length) any=true; XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(rows.length?rows:[[""]]), `Page ${p}`); }
         if(!any) throw new Error("No text layer found. Run OCR first or export as images.");
         bytes=XLSX.write(wb,{type:"array",bookType:"xlsx"}); name=stem+".xlsx"; type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"; }
@@ -424,7 +448,7 @@ reg({ id:"ocr", cat:"Convert from PDF", name:"PDF OCR", desc:"Recognize text in 
   let file=null; const dz=dropZone({onChange:f=>{ file=f[0]||null; btn.disabled=!file; }}); $("[data-drop]",root).replaceWith(dz.el);
   const btn=runButton(root,"Recognize text",async st=>{
     st.set("Loading OCR engine (first time takes a moment)…");
-    const worker=await Tesseract.createWorker($("[data-lang]",root).value, 1, { logger:m=>{ if(m.status==="recognizing text") st.set(`Recognizing… ${Math.round(m.progress*100)}%`); } });
+    const Tesseract=await need("Tesseract"); const worker=await Tesseract.createWorker($("[data-lang]",root).value, 1, { logger:m=>{ if(m.status==="recognizing text") st.set(`Recognizing… ${Math.round(m.progress*100)}%`); } });
     try{
       const src=await loadPdfjs(await file.arrayBuffer()), n=src.numPages, pages=pagesFrom($("[data-pages]",root).value,n), texts=[], out=picked(root,"omode")==="both"?await PDFDocument.create():null;
       const font=out?await out.embedFont(StandardFonts.Helvetica):null;
@@ -480,7 +504,7 @@ async function pptxToText(buf){
   return out.join("\n\n\n");
 }
 async function odfToText(buf){ const zip=await JSZip.loadAsync(buf); const x=await zip.file("content.xml")?.async("string"); if(!x) throw new Error("This doesn't look like an OpenDocument file."); return stripXml(x); }
-function xlsxToText(buf){ const wb=XLSX.read(buf,{type:"array"}); return wb.SheetNames.map(n=>`${n}\n${XLSX.utils.sheet_to_csv(wb.Sheets[n],{FS:"\t"})}`).join("\n\n\n"); }
+async function xlsxToText(buf){ const XLSX=await need("XLSX"); const wb=XLSX.read(buf,{type:"array"}); return wb.SheetNames.map(n=>`${n}\n${XLSX.utils.sheet_to_csv(wb.Sheets[n],{FS:"\t"})}`).join("\n\n\n"); }
 
 const TO_PDF_ACCEPT = ".png,.jpg,.jpeg,.webp,.gif,.bmp,.txt,.md,.csv,.rtf,.html,.htm,.epub,.zip,.docx,.xlsx,.xls,.pptx,.odt,.ods,.odp,image/*";
 const toPdfOk = f => /^image\//.test(f.type) || /\.(png|jpe?g|webp|gif|bmp|txt|md|csv|rtf|html?|epub|zip|docx|xlsx|xls|pptx|odt|ods|odp)$/i.test(f.name);
@@ -488,8 +512,8 @@ async function fileToDoc(doc, f, st){
   const n=f.name, ext=(n.match(/\.([^.]+)$/)?.[1]||"").toLowerCase();
   if(/^image\//.test(f.type)||/^(png|jpe?g|webp|gif|bmp)$/.test(ext)) return imageToPage(doc,f,n);
   const buf=await f.arrayBuffer(), title=baseName(f);
-  if(ext==="docx"){ const r=await mammoth.extractRawText({arrayBuffer:buf}); return textToPages(doc,r.value); }
-  if(ext==="xlsx"||ext==="xls"){ return textToPages(doc,xlsxToText(buf),{mono:true,size:9}); }
+  if(ext==="docx"){ const mammoth=await need("mammoth"); const r=await mammoth.extractRawText({arrayBuffer:buf}); return textToPages(doc,r.value); }
+  if(ext==="xlsx"||ext==="xls"){ return textToPages(doc,await xlsxToText(buf),{mono:true,size:9}); }
   if(ext==="pptx") return textToPages(doc,await pptxToText(buf),{title});
   if(/^od[tsp]$/.test(ext)) return textToPages(doc,await odfToText(buf),ext==="ods"?{mono:true,size:9}:{});
   if(ext==="rtf") return textToPages(doc,rtfToText(new TextDecoder().decode(buf)));
@@ -837,6 +861,90 @@ aiTool({id:"chat",name:"Chat with PDF",desc:"Have a back-and-forth conversation 
 aiTool({id:"summarize",name:"AI PDF Summarizer",desc:"One-click summary at the length you choose.",lede:"Get a summary of the whole document.",system:"You write clear, faithful summaries of documents.",quick:[["One paragraph","Summarize this document in one paragraph."],["Short summary","Summarize this document in 3–5 short paragraphs."],["Detailed summary","Write a detailed summary of this document, section by section, with headings."],["Executive brief","Write an executive brief: purpose, key findings, recommendations, and open questions."]]});
 aiTool({id:"translate",name:"Translate PDF",desc:"Translate the document's text into another language.",lede:"Translates the text of the document. Long documents are translated in part; download the result as a text file.",system:"You are a professional translator. Translate faithfully, keep the structure and page markers, and do not add commentary.",chat:false,goLabel:"Translate",prompt:root=>`Translate the entire document into ${$("[data-lang]",root).value}. Keep the [Page N] markers.`});
 aiTool({id:"questions",name:"AI Question Generator",desc:"Turn a document into study or quiz questions.",lede:"Generates questions with answers from the document — useful for studying, teaching, or checking understanding.",system:"You write high-quality study questions grounded strictly in the provided document, with an answer key at the end.",chat:false,goLabel:"Generate questions",prompt:root=>{ const t={mixed:"a mix of multiple-choice, short-answer, and true/false",mcq:"multiple-choice (4 options each)",short:"short-answer",tf:"true or false"}[$("[data-qtype]",root).value]; return `Write ${$("[data-count]",root).value} ${t} questions based on this document, numbered. Cover the most important content. After the questions, add an answer key with a one-line explanation and the page number for each.`; }});
+
+
+/* ================= BATCH COMPRESS ================= */
+reg({ id:"batch-compress", cat:"Compress", name:"Batch Compress", desc:"Shrink many PDFs at once and download a zip.", build(root){
+  root.innerHTML=shell("Batch Compress","Add several PDFs and compress them all in one go. Light keeps text selectable; strong redraws pages as images.",`<div data-drop></div><div class="options"><div class="field"><label>Level</label>${choice("bl",[["light","Light"],["strong","Strong (image quality 70%)"]])}</div></div>`);
+  let files=[]; const dz=dropZone({multi:true,label:"Drop PDFs here or click to choose",sub:"Any number of files",onChange:f=>{ files=f; btn.disabled=!files.length; }}); $("[data-drop]",root).replaceWith(dz.el);
+  const btn=runButton(root,"Compress all",async st=>{
+    const zip=new JSZip(); let before=0, after=0;
+    for(let i=0;i<files.length;i++){ st.set(`Compressing ${i+1} of ${files.length}…`); const buf=await files[i].arrayBuffer(); let out;
+      if(picked(root,"bl")==="light"){ const d=await loadLib(buf); d.setProducer(""); d.setCreator(""); out=await d.save({useObjectStreams:true}); } else { const src=await loadPdfjs(buf); out=await rasterizePages(buf,idx(1,src.numPages).map(i=>i+1),1.25,0.7); }
+      before+=files[i].size; after+=out.length; zip.file(baseName(files[i])+"-compressed.pdf",out); }
+    const blob=await zip.generateAsync({type:"uint8array"}); st.set("Done.","ok");
+    st.show(`<p>${files.length} files: ${fmt(before)} → ${fmt(after)} (${Math.max(0,Math.round((before-after)/before*100))}% smaller).</p><div class="downloads">${download(blob,"compressed-pdfs.zip","application/zip")}</div>`);
+  });
+}});
+
+/* ================= EXTRACT IMAGES ================= */
+reg({ id:"extract-images", cat:"Convert from PDF", name:"Extract Images", desc:"Pull out the pictures embedded in a PDF.", build(root){
+  root.innerHTML=shell("Extract Images","Finds the images embedded in the PDF and saves each one as a file. Vector drawings and text aren't images, so they won't appear.",`<div data-drop></div><div class="options"><div class="field"><label>Pages</label><input type="text" data-pages placeholder="All pages — or e.g. 1-3" style="max-width:320px"></div><div class="field"><label>Skip tiny images (icons, bullets)</label>${choice("min",[["64","Yes, under 64 px"],["0","No, keep everything"]])}</div></div>`);
+  let file=null; const dz=dropZone({onChange:f=>{ file=f[0]||null; btn.disabled=!file; }}); $("[data-drop]",root).replaceWith(dz.el);
+  const btn=runButton(root,"Extract images",async st=>{
+    const src=await loadPdfjs(await file.arrayBuffer()), n=src.numPages, pages=pagesFrom($("[data-pages]",root).value,n), min=+picked(root,"min"), zip=new JSZip(); let count=0; const seen=new Set();
+    for(const p of pages){ st.set(`Scanning page ${p} of ${n}…`); const page=await src.getPage(p), ops=await page.getOperatorList();
+      for(let i=0;i<ops.fnArray.length;i++){ const fn=ops.fnArray[i]; if(fn!==pdfjsLib.OPS.paintImageXObject && fn!==pdfjsLib.OPS.paintInlineImageXObject) continue; const name=ops.argsArray[i][0]; if(seen.has(name)) continue;
+        let img; try{ img = await new Promise((res,rej)=>{ try{ page.objs.get(name,res); }catch(e){ try{ res(page.commonObjs.get(name)); }catch(e2){ rej(e2); } } }); }catch{ continue; } if(!img||!img.width) continue; seen.add(name);
+        if(img.width<min||img.height<min) continue;
+        const c=document.createElement("canvas"); c.width=img.width; c.height=img.height; const ctx=c.getContext("2d");
+        if(img.bitmap){ ctx.drawImage(img.bitmap,0,0); } else { const d=ctx.createImageData(img.width,img.height); const s=img.data; if(s.length===d.data.length) d.data.set(s); else if(s.length===img.width*img.height*3){ for(let k=0,q=0;k<s.length;k+=3,q+=4){ d.data[q]=s[k]; d.data[q+1]=s[k+1]; d.data[q+2]=s[k+2]; d.data[q+3]=255; } } else if(s.length===img.width*img.height){ for(let k=0,q=0;k<s.length;k++,q+=4){ d.data[q]=d.data[q+1]=d.data[q+2]=s[k]; d.data[q+3]=255; } } else continue; ctx.putImageData(d,0,0); }
+        count++; zip.file(`${baseName(file)}-p${p}-img${count}.png`, await (await canvasBlob(c)).arrayBuffer()); } }
+    if(!count) throw new Error("No embedded images found on those pages.");
+    const blob=await zip.generateAsync({type:"uint8array"}); st.set("Done.","ok"); st.show(`<p>Found ${count} image${count===1?"":"s"}.</p><div class="downloads">${download(blob,baseName(file)+"-images.zip","application/zip")}</div>`);
+  });
+}});
+
+/* ================= RESIZE PAGES ================= */
+reg({ id:"resize-pages", cat:"Organize", name:"Resize Pages", desc:"Make every page the same size — A4, Letter, or custom.", build(root){
+  root.innerHTML=shell("Resize Pages","Scales each page to fit the chosen size and centers it. Useful before printing or when merged pages came out in different sizes.",`<div data-drop></div><div class="options"><div class="field"><label>Page size</label>${choice("sz",[["a4","A4"],["letter","US Letter"],["legal","US Legal"],["a5","A5"],["a3","A3"]])}</div><div class="field"><label>Orientation</label>${choice("or",[["auto","Match each page"],["p","Portrait"],["l","Landscape"]])}</div></div>`);
+  let file=null; const dz=dropZone({onChange:f=>{ file=f[0]||null; btn.disabled=!file; }}); $("[data-drop]",root).replaceWith(dz.el);
+  const SIZES={a4:[595.28,841.89],letter:[612,792],legal:[612,1008],a5:[419.53,595.28],a3:[841.89,1190.55]};
+  const btn=runButton(root,"Resize pages",async st=>{
+    const src=await loadLib(await file.arrayBuffer()), out=await PDFDocument.create(), base=SIZES[picked(root,"sz")], orn=picked(root,"or"); const embedded=await out.embedPages(src.getPages());
+    embedded.forEach((ep,i)=>{ st.set(`Resizing page ${i+1} of ${embedded.length}…`); const land = orn==="l" || (orn==="auto" && ep.width>ep.height); const [W,H]=land?[base[1],base[0]]:base; const s=Math.min(W/ep.width,H/ep.height), w=ep.width*s, h=ep.height*s; out.addPage([W,H]).drawPage(ep,{x:(W-w)/2,y:(H-h)/2,width:w,height:h}); });
+    const bytes=await out.save({useObjectStreams:true}); st.set("Done.","ok"); st.show(`<p>${embedded.length} pages resized.</p><div class="downloads">${download(bytes,baseName(file)+"-resized.pdf")}</div>`);
+  });
+}});
+
+/* ================= HEADER & FOOTER ================= */
+reg({ id:"header-footer", cat:"Edit", name:"Header & Footer", desc:"Add a title, date, or note to the top or bottom of every page.", build(root){
+  root.innerHTML=shell("Header & Footer","Stamp text on every page. Use {page} and {pages} for page numbers and {date} for today's date.",`<div data-drop></div><div class="options">
+    <div class="row"><div class="field"><label>Header (left)</label><input type="text" data-hl placeholder="Company name"></div><div class="field"><label>Header (right)</label><input type="text" data-hr placeholder="{date}"></div></div>
+    <div class="row"><div class="field"><label>Footer (left)</label><input type="text" data-fl placeholder="Confidential"></div><div class="field"><label>Footer (right)</label><input type="text" data-fr placeholder="Page {page} of {pages}"></div></div>
+    <div class="field"><label>Size</label><input type="number" data-size value="9" min="6" max="24" style="max-width:100px"></div></div>`);
+  let file=null; const dz=dropZone({onChange:f=>{ file=f[0]||null; btn.disabled=!file; }}); $("[data-drop]",root).replaceWith(dz.el);
+  const btn=runButton(root,"Add header and footer",async st=>{
+    const doc=await loadLib(await file.arrayBuffer()), font=await doc.embedFont(StandardFonts.Helvetica), n=doc.getPageCount(), size=+$("[data-size]",root).value, date=new Date().toLocaleDateString();
+    const g=k=>$(`[data-${k}]`,root).value; if(!(g("hl")||g("hr")||g("fl")||g("fr"))) throw new Error("Enter at least one header or footer.");
+    doc.getPages().forEach((pg,i)=>{ const {width:W,height:H}=pg.getSize(), sub=s=>cleanText(s.replace("{page}",i+1).replace("{pages}",n).replace("{date}",date)), col=rgb(.25,.25,.25);
+      if(g("hl")) pg.drawText(sub(g("hl")),{x:36,y:H-30,size,font,color:col}); if(g("hr")){ const t=sub(g("hr")); pg.drawText(t,{x:W-36-font.widthOfTextAtSize(t,size),y:H-30,size,font,color:col}); }
+      if(g("fl")) pg.drawText(sub(g("fl")),{x:36,y:22,size,font,color:col}); if(g("fr")){ const t=sub(g("fr")); pg.drawText(t,{x:W-36-font.widthOfTextAtSize(t,size),y:22,size,font,color:col}); } });
+    const out=await doc.save({useObjectStreams:true}); st.set("Done.","ok"); st.show(`<p>Added to ${n} pages.</p><div class="downloads">${download(out,baseName(file)+"-stamped.pdf")}</div>`);
+  });
+}});
+
+/* ================= METADATA ================= */
+reg({ id:"metadata", cat:"Edit", name:"Edit Metadata", desc:"Change the title, author, and keywords stored in the file.", build(root){
+  root.innerHTML=shell("Edit Metadata","These details show up in PDF readers and search results. Leave a field empty to clear it.",`<div data-drop></div><div class="options"><div class="row"><div class="field"><label>Title</label><input type="text" data-m="title"></div><div class="field"><label>Author</label><input type="text" data-m="author"></div></div><div class="row"><div class="field"><label>Subject</label><input type="text" data-m="subject"></div><div class="field"><label>Keywords (comma-separated)</label><input type="text" data-m="keywords"></div></div><div class="field" data-info style="color:var(--ink-2);font-size:14px"></div></div>`);
+  let file=null; const dz=dropZone({onChange:async f=>{ file=f[0]||null; btn.disabled=!file; if(file){ const d=await loadLib(await file.arrayBuffer()); $("[data-m=title]",root).value=d.getTitle()||""; $("[data-m=author]",root).value=d.getAuthor()||""; $("[data-m=subject]",root).value=d.getSubject()||""; $("[data-m=keywords]",root).value=d.getKeywords()||""; $("[data-info]",root).textContent=`${d.getPageCount()} pages · created ${d.getCreationDate()?d.getCreationDate().toLocaleDateString():"unknown"} · producer ${d.getProducer()||"unknown"}`; } }}); $("[data-drop]",root).replaceWith(dz.el);
+  const btn=runButton(root,"Save metadata",async st=>{
+    const d=await loadLib(await file.arrayBuffer()); d.setTitle($("[data-m=title]",root).value); d.setAuthor($("[data-m=author]",root).value); d.setSubject($("[data-m=subject]",root).value); d.setKeywords($("[data-m=keywords]",root).value.split(",").map(s=>s.trim()).filter(Boolean)); d.setModificationDate(new Date());
+    const out=await d.save({useObjectStreams:true}); st.set("Done.","ok"); st.show(`<p>Metadata updated.</p><div class="downloads">${download(out,baseName(file)+".pdf")}</div>`);
+  });
+}});
+
+/* ================= REPAIR ================= */
+reg({ id:"repair", cat:"Protect", name:"Repair PDF", desc:"Rebuild a damaged PDF that won't open properly.", build(root){
+  root.innerHTML=shell("Repair PDF","Rewrites the file's internal structure. Fixes many 'file is damaged' errors. If that fails, the fallback rebuilds it from page images.",`<div data-drop></div>`);
+  let file=null; const dz=dropZone({onChange:f=>{ file=f[0]||null; btn.disabled=!file; }}); $("[data-drop]",root).replaceWith(dz.el);
+  const btn=runButton(root,"Repair PDF",async st=>{
+    const buf=await file.arrayBuffer(); let out, how="Structure rebuilt.";
+    try{ st.set("Rebuilding structure…"); const d=await PDFDocument.load(buf.slice(0),{ignoreEncryption:true,throwOnInvalidObject:false}); out=await d.save({useObjectStreams:true}); }
+    catch(e){ st.set("Structure repair failed — rebuilding from page images…"); const src=await loadPdfjs(buf); out=await rasterizePages(buf,idx(1,src.numPages).map(i=>i+1),2,0.9,(i,n)=>st.set(`Rebuilding page ${i} of ${n}…`)); how="Rebuilt from page images (text is no longer selectable — run OCR if needed)."; }
+    st.set("Done.","ok"); st.show(`<p>${how}</p><div class="downloads">${download(out,baseName(file)+"-repaired.pdf")}</div>`);
+  });
+}});
 
 /* ================= boot ================= */
 buildHome(); showTool(location.hash.slice(1));
