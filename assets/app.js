@@ -139,9 +139,13 @@ async function textToPages(doc, text, opts={}){
 }
 
 /* ---------- UI building blocks ---------- */
-function statusBox(root){ return { set:(m,c="")=>{ const s=$(".status",root); s.textContent=m; s.className="status "+c; const pm=m.match(/(\d+) of (\d+)/); const p=$(".progress",root); if(p){ if(pm&&!c){ p.setAttribute("data-on",""); $("i",p).style.width=Math.round(+pm[1]/+pm[2]*100)+"%"; } else p.removeAttribute("data-on"); } },
+// Prefer the status slot in the tool's action row. A plain ".status" lookup used to win the drop zone's own
+// message div first (it comes earlier in the DOM), so run/progress/error text landed under the file list.
+function statusBox(root){ return { set:(m,c="")=>{ const s=$(".actions .status",root)||$(".status",root); s.textContent=m; s.className="status "+c; const pm=m.match(/(\d+) of (\d+)/); const p=$(".progress",root); if(p){ if(pm&&!c){ p.setAttribute("data-on",""); $("i",p).style.width=Math.round(+pm[1]/+pm[2]*100)+"%"; } else p.removeAttribute("data-on"); } },
   show:(html)=>{ const r=$(".result",root); r.innerHTML=html; r.setAttribute("data-show",""); },
-  hide:()=>$(".result",root)?.removeAttribute("data-show") }; }
+  hide:()=>$(".result",root)?.removeAttribute("data-show"),
+  // Reset the status slot so a previous run's "Done." or error can't linger while a new run is starting.
+  clear:()=>{ const s=$(".actions .status",root)||$(".status",root); if(s){ s.textContent=""; s.className="status"; } $(".progress",root)?.removeAttribute("data-on"); } }; }
 
 function dropZone({multi=false, accept="application/pdf", label="Drop a PDF here or click to choose", sub="One file", filter=isPdf, badMsg="That isn't a PDF. Choose a .pdf file.", onChange}){
   const wrap = el("div");
@@ -178,7 +182,7 @@ const choice = (name, opts, checked=0) => `<div class="choice">${opts.map(([v,l]
 const picked = (root,name) => $(`input[name=${name}]:checked`,root)?.value;
 function runButton(root, label, fn){
   const btn=$("[data-run]",root); btn.textContent=label;
-  btn.onclick = async () => { btn.disabled=true; const st=statusBox(root); st.hide(); try{ await fn(st); }catch(e){ console.error(e); st.set(e.message||String(e),"bad"); } btn.disabled=false; };
+  btn.onclick = async () => { btn.disabled=true; const st=statusBox(root); st.hide(); st.clear(); try{ await fn(st); }catch(e){ console.error(e); st.set(e.message||String(e),"bad"); } btn.disabled=false; };
   return btn;
 }
 const shell = (title, lede, inner) => `<h2>${title}</h2><p class="lede">${lede}</p>${inner}<div class="actions"><button class="btn" data-run disabled>Run</button><span class="status"></span></div><div class="progress"><i></i></div><div class="result"></div>`;
@@ -814,12 +818,23 @@ reg({ id:"crop", cat:"Edit", name:"Crop PDF", desc:"Trim margins or crop to a re
 }});
 
 /* ================= FORM FILLER ================= */
+// Identify a pdf-lib form field by class, not by f.constructor.name: the minified pdf-lib build renames its
+// classes to one-letter names (two field classes even collide on the same letter), so name checks never match.
+function fieldType(f){
+  const L=window.PDFLib||{};
+  if(L.PDFTextField && f instanceof L.PDFTextField) return "PDFTextField";
+  if(L.PDFCheckBox && f instanceof L.PDFCheckBox) return "PDFCheckBox";
+  if(L.PDFDropdown && f instanceof L.PDFDropdown) return "PDFDropdown";
+  if(L.PDFOptionList && f instanceof L.PDFOptionList) return "PDFOptionList";
+  if(L.PDFRadioGroup && f instanceof L.PDFRadioGroup) return "PDFRadioGroup";
+  return "";
+}
 reg({ id:"form-filler", cat:"Edit", name:"PDF Form Filler", desc:"Fill in fillable PDF forms.", build(root){
   root.innerHTML=shell("PDF Form Filler","Fillable fields in the PDF appear below. Fill them in and save. If a PDF has no fields, use Edit PDF to type over it instead.",`<div data-drop></div><div class="form-fields" data-fields></div><div class="options" data-opts hidden><div class="field"><label>After filling</label>${choice("flat",[["keep","Keep fields editable"],["flat","Flatten — lock the answers in"]])}</div></div>`);
   let file=null, doc=null; const dz=dropZone({onChange:async f=>{ file=f[0]||null; btn.disabled=!file; $("[data-fields]",root).innerHTML=""; $("[data-opts]",root).hidden=true; if(file) await load(); }}); $("[data-drop]",root).replaceWith(dz.el);
   async function load(){ doc=await loadLib(await file.arrayBuffer()); const form=doc.getForm(), fields=form.getFields(), box=$("[data-fields]",root);
     if(!fields.length){ box.innerHTML=`<p class="status bad">This PDF has no fillable fields.</p>`; btn.disabled=true; return; } $("[data-opts]",root).hidden=false;
-    for(const f of fields){ const name=f.getName(), t=f.constructor.name, w=el("div",{class:"field"}); let inner="";
+    for(const f of fields){ const name=f.getName(), t=fieldType(f), w=el("div",{class:"field"}); let inner="";
       if(t==="PDFTextField") inner=`<label>${esc(name)}</label><input type="text" data-f="${esc(name)}" value="${esc(f.getText()||"")}">`;
       else if(t==="PDFCheckBox") inner=`<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-f="${esc(name)}" ${f.isChecked()?"checked":""}> ${esc(name)}</label>`;
       else if(t==="PDFDropdown"||t==="PDFOptionList") inner=`<label>${esc(name)}</label><select data-f="${esc(name)}">${f.getOptions().map(o=>`<option ${f.getSelected().includes(o)?"selected":""}>${esc(o)}</option>`).join("")}</select>`;
@@ -827,8 +842,8 @@ reg({ id:"form-filler", cat:"Edit", name:"PDF Form Filler", desc:"Fill in fillab
       else continue; w.innerHTML=inner; box.appendChild(w); } }
   const btn=runButton(root,"Save filled form",async st=>{
     const form=doc.getForm();
-    for(const inp of $$("[data-f]",root)){ const f=form.getField(inp.dataset.f), t=f.constructor.name; try{
-      if(t==="PDFTextField") f.setText(inp.value); else if(t==="PDFCheckBox"){ inp.checked?f.check():f.uncheck(); } else if(t==="PDFDropdown"||t==="PDFOptionList"){ if(inp.value) f.select(inp.value); } else if(t==="PDFRadioGroup"){ if(inp.value) f.select(inp.value); } }catch(e){ console.warn(name,e); } }
+    for(const inp of $$("[data-f]",root)){ const f=form.getField(inp.dataset.f), t=fieldType(f); try{
+      if(t==="PDFTextField") f.setText(inp.value); else if(t==="PDFCheckBox"){ inp.checked?f.check():f.uncheck(); } else if(t==="PDFDropdown"||t==="PDFOptionList"){ if(inp.value) f.select(inp.value); } else if(t==="PDFRadioGroup"){ if(inp.value) f.select(inp.value); } }catch(e){ console.warn(inp.dataset.f,e); } }
     if(picked(root,"flat")==="flat") form.flatten();
     const out=await doc.save({useObjectStreams:true}); st.set("Done.","ok"); st.show(`<p>Form saved (${fmt(out.length)}).</p><div class="downloads">${download(out,baseName(file)+"-filled.pdf")}</div>`);
     doc=await loadLib(await file.arrayBuffer());
@@ -929,9 +944,18 @@ reg({ id:"extract-images", cat:"Convert from PDF", name:"Extract Images", desc:"
   let file=null; const dz=dropZone({onChange:f=>{ file=f[0]||null; btn.disabled=!file; }}); $("[data-drop]",root).replaceWith(dz.el);
   const btn=runButton(root,"Extract images",async st=>{
     const src=await loadPdfjs(await file.arrayBuffer()), n=src.numPages, pages=pagesFrom($("[data-pages]",root).value,n), min=+picked(root,"min"), zip=new JSZip(); let count=0; const seen=new Set();
-    for(const p of pages){ st.set(`Scanning page ${p} of ${n}…`); const page=await src.getPage(p), ops=await page.getOperatorList();
-      for(let i=0;i<ops.fnArray.length;i++){ const fn=ops.fnArray[i]; if(fn!==pdfjsLib.OPS.paintImageXObject && fn!==pdfjsLib.OPS.paintInlineImageXObject) continue; const name=ops.argsArray[i][0]; if(seen.has(name)) continue;
-        let img; try{ img = await new Promise((res,rej)=>{ try{ page.objs.get(name,res); }catch(e){ try{ res(page.commonObjs.get(name)); }catch(e2){ rej(e2); } } }); }catch{ continue; } if(!img||!img.width) continue; seen.add(name);
+    for(const p of pages){ st.set(`Scanning page ${p} of ${n}…`); const page=await src.getPage(p);
+      // pdf.js only decodes image XObjects while rendering, so page.objs.get() on an unrendered page waits forever.
+      // Render once to a tiny canvas to resolve every image on the page, then look them up.
+      { const vp=page.getViewport({scale:0.05}); const rc=document.createElement("canvas"); rc.width=Math.max(1,Math.ceil(vp.width)); rc.height=Math.max(1,Math.ceil(vp.height)); await page.render({canvasContext:rc.getContext("2d"),viewport:vp}).promise; }
+      const ops=await page.getOperatorList();
+      for(let i=0;i<ops.fnArray.length;i++){ const fn=ops.fnArray[i]; if(fn!==pdfjsLib.OPS.paintImageXObject && fn!==pdfjsLib.OPS.paintInlineImageXObject) continue; const arg=ops.argsArray[i][0];
+        let img;
+        if(fn===pdfjsLib.OPS.paintInlineImageXObject){ img=arg; } // inline images carry their pixel data directly, not a name
+        else { const name=arg; if(seen.has(name)) continue; seen.add(name);
+          try{ img=await new Promise((res,rej)=>{ const t=setTimeout(()=>rej(new Error("image not resolved")),3000); const done=v=>{ clearTimeout(t); res(v); };
+            try{ if(page.objs.has(name)) done(page.objs.get(name)); else if(page.commonObjs.has(name)) done(page.commonObjs.get(name)); else page.objs.get(name,done); }catch(e){ clearTimeout(t); rej(e); } }); }catch{ continue; } }
+        if(!img||!img.width) continue;
         if(img.width<min||img.height<min) continue;
         const c=document.createElement("canvas"); c.width=img.width; c.height=img.height; const ctx=c.getContext("2d");
         if(img.bitmap){ ctx.drawImage(img.bitmap,0,0); } else { const d=ctx.createImageData(img.width,img.height); const s=img.data; if(s.length===d.data.length) d.data.set(s); else if(s.length===img.width*img.height*3){ for(let k=0,q=0;k<s.length;k+=3,q+=4){ d.data[q]=s[k]; d.data[q+1]=s[k+1]; d.data[q+2]=s[k+2]; d.data[q+3]=255; } } else if(s.length===img.width*img.height){ for(let k=0,q=0;k<s.length;k++,q+=4){ d.data[q]=d.data[q+1]=d.data[q+2]=s[k]; d.data[q+3]=255; } } else continue; ctx.putImageData(d,0,0); }
