@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="SheetSimple — compress, convert, merge, split, edit, sign, scan, and ask AI about PDFs. Runs entirely in your browser; files never leave your device.">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<title>SheetSimple — every PDF tool, right in your browser</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.1/tesseract.min.js"></script>
+<link rel="stylesheet" href="assets/styles.css">
+</head>
+<body>
+<div class="bar">
+  <div class="bar-in">
+    <a class="brand" href="#">SheetSimple</a>
+    <button class="menu-btn" id="menu-btn" aria-expanded="false">All tools</button>
+    <nav class="nav">
+      <a href="#compress">Compress</a><a href="#pdf-converter">Convert</a><a href="#merge">Merge</a><a href="#organize">Organize</a><a href="#edit">Edit</a><a href="#sign">Sign</a><a href="#ai">AI</a><a href="#scanner">Scan</a>
+    </nav>
+  </div>
+  <div class="mega" id="mega"><div class="mega-in" id="mega-in"></div></div>
+</div>
+
+<div class="wrap">
+  <div class="tool" id="home" data-active>
+    <div class="hero">
+      <h1>Welcome to SheetSimple. What can we do with your PDF today?</h1>
+      <p>Pick a tool below or just start typing. Everything runs in this browser tab, so your files stay on your device — no sign-up, no uploads, no waiting.</p>
+      <label class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" id="tool-search" placeholder="Search tools… e.g. merge, word, sign" autocomplete="off"><kbd>/</kbd></label>
+      <div class="popular" id="popular"></div>
+    </div>
+    <div id="home-grid"></div>
+  </div>
+  <div id="tools"></div>
+  <footer>Nothing is uploaded. Close the tab and everything is gone. Very large files depend on your device's memory.</footer>
+</div>
+<script src="assets/app.js"></script>
+</body>
+</html>
