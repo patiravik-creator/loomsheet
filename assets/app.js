@@ -278,7 +278,7 @@ function showTool(id){
   if(!usable(t)){ $("#home").setAttribute("data-active",""); window.scrollTo(0,0); document.title="Loomsheet — every PDF tool, right in your browser"; $('link[rel=canonical]')?.setAttribute("href", ROOT); return; }
   let sec = $("#tool-"+id);
   if(!sec){
-    sec = el("section",{class:"tool",id:"tool-"+id},`<div class="crumbs"><a href="${ROOT}">All tools</a> / <a href="${ROOT}" data-cat-crumb="${esc(t.cat)}">${esc(t.cat)}</a> / <span class="crumb-current">${esc(t.name)}</span><span class="crumb-actions"><button class="btn quiet share-btn fav-btn" data-favtool="${id}" ${isFav(id)?"data-on":""}>${isFav(id)?"★ Favorited":"☆ Favorite"}</button><button class="btn quiet share-btn" data-share>Share</button></span></div><div class="sheet" data-cc style="--cc:${CAT_COLOR[t.cat]}"></div>`);
+    sec = el("section",{class:"tool",id:"tool-"+id},`<div class="crumbs"><a href="${ROOT}" data-cat-crumb="${esc(t.cat)}">${esc(t.cat)}</a> / <span class="crumb-current">${esc(t.name)}</span><span class="crumb-actions"><button class="btn quiet share-btn fav-btn" data-favtool="${id}" ${isFav(id)?"data-on":""}>${isFav(id)?"★ Favorited":"☆ Favorite"}</button><button class="btn quiet share-btn" data-share>Share</button></span></div><div class="sheet" data-cc style="--cc:${CAT_COLOR[t.cat]}"></div>`);
     $("[data-share]",sec).onclick=()=>shareTool(t); $("[data-favtool]",sec).onclick=()=>toggleFav(id);
     $("#tools").appendChild(sec); const sh=$(".sheet",sec); t.build(sh, t);
     const h2=$("h2",sh); if(h2){ const head=el("div",{class:"tool-head"},icon(t)); h2.replaceWith(head); head.appendChild(h2); }
