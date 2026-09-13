@@ -467,21 +467,31 @@ window.TOOL_CONTENT = {
   }
 };
 
-/* Renders the section shown under a tool. `opts.link(tool)` returns the URL for a related tool and
-   `opts.icon(tool)` (optional) returns its icon markup. Works in the browser and in Node (the page generator). */
-window.renderToolInfo = function (t, tools, opts) {
+/* Two pieces: the intro (badge, about, steps) shown above the tool, and the questions + related tools shown below it.
+   `opts.link(tool)` returns the URL for a related tool and `opts.icon(tool)` (optional) returns its icon markup.
+   Works in the browser and in Node (the page generator, which writes both pieces into the static page). */
+const _escTC = (s) => String(s).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
+window.renderToolIntro = function (t) {
   const c = window.TOOL_CONTENT[t.id];
   if (!c) return "";
-  const esc = (s) => String(s).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
-  const related = (c.related || []).map((id) => tools.find((x) => x.id === id)).filter((x) => x && !x.na && !x.hidden);
+  const esc = _escTC;
   const lock = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
-  return `<section class="tool-info" data-tool-info="${esc(t.id)}">
-  <p class="ti-badge">${lock}<b>Runs on your device.</b> Your file is never uploaded — it's processed in this tab and gone when you close it.</p>
+  return `<section class="tool-info tool-intro" data-tool-info="${esc(t.id)}">
+  <p class="ti-badge">${lock}<b>Runs on your device.</b> Your file is never uploaded \u2014 it's processed in this tab and gone when you close it.</p>
   <div class="ti-grid">
     <div class="ti-about"><h3>About ${esc(t.name)}</h3><p>${esc(c.intro)}</p></div>
     <div class="ti-steps"><h3>How it works</h3><ol>${c.steps.map((s, i) => `<li><span>${i + 1}</span>${esc(s)}</li>`).join("")}</ol></div>
   </div>
+</section>`;
+};
+window.renderToolMore = function (t, tools, opts) {
+  const c = window.TOOL_CONTENT[t.id];
+  if (!c) return "";
+  const esc = _escTC;
+  const related = (c.related || []).map((id) => tools.find((x) => x.id === id)).filter((x) => x && !x.na && !x.hidden);
+  return `<section class="tool-info tool-more" data-tool-info="${esc(t.id)}">
   <div class="ti-faq"><h3>Common questions</h3>${c.faq.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join("")}</div>
   ${related.length ? `<div class="ti-related"><h3>Often used next</h3><div class="ti-cards">${related.map((r) => `<a href="${esc(opts.link(r))}">${opts.icon ? opts.icon(r) : ""}<span class="ti-card-text"><b>${esc(r.name)}</b><span>${esc(r.desc)}</span></span></a>`).join("")}</div></div>` : ""}
 </section>`;
 };
+window.renderToolInfo = (t, tools, opts) => window.renderToolIntro(t) + window.renderToolMore(t, tools, opts);

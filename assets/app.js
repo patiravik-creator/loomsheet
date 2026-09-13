@@ -272,7 +272,7 @@ function showTool(id){
     const h2=$("h2",sh); if(h2){ const head=el("div",{class:"tool-head"},icon(t)); h2.replaceWith(head); head.appendChild(h2); }
     restorePrefs(sh,id);
     // Intro, steps, questions and related tools (assets/tool-content.js) under the tool.
-    if(window.renderToolInfo){ const info=renderToolInfo(t, TOOLS, {link:toolUrl, icon}); if(info) sec.insertAdjacentHTML("beforeend", info); }
+    if(window.renderToolIntro){ const intro=renderToolIntro(t), more=renderToolMore(t, TOOLS, {link:toolUrl, icon}); if(intro) sh.insertAdjacentHTML("beforebegin", intro); if(more) sh.insertAdjacentHTML("afterend", more); }
   }
   sec.setAttribute("data-active",""); window.scrollTo(0,0); noteRecent(id); document.title = t.name+" — Loomsheet"; $('meta[name=description]').setAttribute("content", t.desc+" Free, private, runs in your browser."); $('link[rel=canonical]')?.setAttribute("href", toolUrl(t));
 }

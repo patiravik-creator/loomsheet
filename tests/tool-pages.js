@@ -44,9 +44,9 @@ const ok = (name, pass, detail = "") => { results.push({ name, pass }); console.
       if (!canonical.endsWith("/" + slug + "/")) bad.push(`${slug}: canonical ${canonical}`);
       if (!cssLoaded) bad.push(`${slug}: stylesheet not applied (bad relative path?)`);
       if (slug !== "about") {
-        const info = await page.evaluate(() => { const i = document.querySelector(".tool[data-active] .tool-info"); return i ? { badge: !!i.querySelector(".ti-badge"), steps: i.querySelectorAll(".ti-steps li").length, faq: i.querySelectorAll(".ti-faq details").length, related: i.querySelectorAll(".ti-cards a").length, staticLeft: document.querySelectorAll("[data-static-info]").length } : null; });
+        const info = await page.evaluate(() => { const i = document.querySelector(".tool[data-active]"); const sheet = i.querySelector(".sheet"); const intro = i.querySelector(".tool-intro"), more = i.querySelector(".tool-more"); return intro && more ? { badge: !!intro.querySelector(".ti-badge"), steps: intro.querySelectorAll(".ti-steps li").length, faq: more.querySelectorAll(".ti-faq details").length, related: more.querySelectorAll(".ti-cards a").length, staticLeft: document.querySelectorAll("[data-static-info]").length, introAbove: !!(intro.compareDocumentPosition(sheet) & Node.DOCUMENT_POSITION_FOLLOWING), moreBelow: !!(sheet.compareDocumentPosition(more) & Node.DOCUMENT_POSITION_FOLLOWING) } : null; });
         if (!info) bad.push(`${slug}: no tool-info section rendered`);
-        else if (!info.badge || info.steps < 3 || info.faq < 3 || info.related < 1 || info.staticLeft) bad.push(`${slug}: tool-info incomplete ${JSON.stringify(info)}`);
+        else if (!info.badge || info.steps < 3 || info.faq < 3 || info.related < 1 || info.staticLeft || !info.introAbove || !info.moreBelow) bad.push(`${slug}: tool-info incomplete ${JSON.stringify(info)}`);
         const staticHtml = fs.readFileSync(path.join(ROOT_DIR, slug, "index.html"), "utf8");
         if (!staticHtml.includes("data-static-info") || !staticHtml.includes('"FAQPage"')) bad.push(`${slug}: static page lacks the info block or FAQ structured data`);
       }

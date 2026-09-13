@@ -127,7 +127,9 @@
   .sheet .lede{color:var(--ink-2);margin:0 0 24px;max-width:62ch}
 
   /* tool page: intro, steps, questions, related tools (assets/tool-content.js) */
-  .tool-info{max-width:900px;margin:22px 0 0;display:grid;gap:22px}
+  .tool-info{max-width:900px;display:grid;gap:22px}
+  .tool-intro{margin:0 0 18px;gap:14px}
+  .tool-more{margin:22px 0 0}
   .tool-info h3{margin:0 0 10px;font-size:15px;font-weight:650;letter-spacing:.01em;color:var(--ink)}
   .tool-info p{margin:0;color:var(--ink-2);line-height:1.6}
   .ti-badge{display:flex;align-items:center;gap:10px;padding:12px 16px;border-radius:var(--radius);background:color-mix(in srgb,var(--ok) 10%,var(--sheet));border:1px solid color-mix(in srgb,var(--ok) 35%,var(--rule));color:var(--ink-2);font-size:14px}
