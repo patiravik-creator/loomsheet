@@ -235,8 +235,10 @@ async function runFileTool(page, { id, label, files, multi = false, configure, r
       errs = await collectingErrors(page, async () => {
         await gotoTool(page, id);
         await page.locator(`#tool-${id} .drop input[type=file]`).first().setInputFiles(FIX("sample.pdf"));
-        await page.waitForSelector(`#tool-${id} [data-canvas]`, { timeout: 15000 });
-        await page.waitForTimeout(1200);
+        // The <canvas> exists before the page has rendered into it; wait until it has a real size (i.e. the render finished)
+        // rather than sleeping — a cold CI runner can take longer than any fixed timer.
+        await page.waitForFunction((sel) => { const c = document.querySelector(sel); const r = c && c.getBoundingClientRect(); return !!c && c.width > 100 && c.height > 100 && r.height > 100; }, `#tool-${id} [data-canvas]`, { timeout: 30000 });
+        await page.waitForTimeout(300);
         // The preview is taller than the default viewport; the drag's start and end must both be on screen, so use a tall
         // viewport for this step and scroll the overlay's top under the sticky bar.
         await page.setViewportSize({ width: 1280, height: 1400 });
