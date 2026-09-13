@@ -49,6 +49,20 @@ jobs:
         if: always()
         run: node output-checks.js
 
+      - name: Check per-tool pages
+        if: always()
+        run: node tool-pages.js
+
+      - name: Verify generated tool pages are up to date
+        if: always()
+        run: |
+          node ../scripts/build-pages.js --base http://127.0.0.1:8899/
+          if [ -n "$(git -C .. status --porcelain -- . ':!tests')" ]; then
+            echo "scripts/build-pages.js produced changes that aren't committed. Run it locally and commit the result:"
+            git -C .. status --short -- . ':!tests'
+            exit 1
+          fi
+
       - name: Upload results
         if: always()
         uses: actions/upload-artifact@v4

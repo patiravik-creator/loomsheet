@@ -63,7 +63,10 @@ None by default. If you want visitor counts without cookies, there is a commente
 ## Project layout
 
 ```
-index.html           markup and tool shell
+index.html           markup and tool shell (the home page)
+<tool-slug>/         one generated page per tool, e.g. compress-pdf/ — see "Tool pages"
+scripts/build-pages.js   generates those pages and sitemap.xml from the tool registry
+tests/               browser regression suite (see "Tests")
 404.html             redirects unknown paths home (GitHub Pages)
 manifest.json        installable-app metadata
 robots.txt, sitemap.xml
@@ -73,7 +76,28 @@ assets/favicon.svg, icon-192.png, icon-512.png, og-image.png
 backend/             Java 21 / Spring Boot service for the six server-side tools (own README)
 ```
 
-Each tool is registered in `app.js` with `reg({ id, cat, name, desc, build(root) })`. To add one, register a new entry, give it an icon in the `ICON` map, and it appears on the home page, the menu, and at `#your-id`.
+Each tool is registered in `app.js` with `reg({ id, cat, name, desc, build(root) })`. To add one, register a new entry, give it an icon in the `ICON` map, run `node scripts/build-pages.js` (see below), and it appears on the home page, the menu, and at its own URL.
+
+## Tool pages
+
+Every tool has its own real address — `compress-pdf/`, `pdf-to-word/`, and so on — with its own title, description and structured data, so search engines can index each one separately (they ignore anything after a `#`, so the old `#compress` style meant the whole site looked like one page). Those pages are generated, not hand-written:
+
+```bash
+cd tests && npm install        # once; the generator uses Playwright from here
+node scripts/build-pages.js    # from the repo root
+```
+
+It reads the tool list from the running app, writes one `index.html` per tool, removes pages for tools that no longer exist, rewrites `sitemap.xml`, and normalises links in `index.html`. Commit the output. CI fails if the generated pages are out of date. Old `#tool-id` links keep working — the app turns them into the real URL.
+
+## Tests
+
+`tests/` holds a Playwright suite that runs every tool in a real browser: `regression.js` exercises each one end to end, `output-checks.js` reads the produced files back to verify their contents, and `tool-pages.js` checks the generated pages. It runs on every push via GitHub Actions; locally:
+
+```bash
+cd tests && npm install
+npm run serve &                # serves the repo root on :8899
+npm test
+```
 
 ## Backend
 

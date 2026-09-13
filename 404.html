@@ -1,1 +1,8 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=./"><title>Loomsheet</title></head><body><p>Taking you to <a href="./">Loomsheet</a>…</p></body></html>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Loomsheet</title>
+<meta name="robots" content="noindex">
+<script>
+// Unknown address: send the visitor to the home page. On GitHub Pages the site lives under /<repo>/; on a custom
+// domain it's at "/". (A relative "./" redirect here would loop forever on nested paths like /loomsheet/typo/.)
+(function(){ var p=location.pathname.split("/").filter(Boolean); var root=/\.github\.io$/i.test(location.hostname)&&p.length?"/"+p[0]+"/":"/"; document.addEventListener("DOMContentLoaded",function(){ var a=document.getElementById("home"); if(a) a.href=root; }); location.replace(root); })();
+</script>
+</head><body><p>That page doesn't exist. Taking you to <a id="home" href="./">Loomsheet</a>…</p></body></html>

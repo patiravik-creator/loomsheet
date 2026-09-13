@@ -4,7 +4,8 @@
   "description": "Browser regression tests for the Loomsheet site. Serve the repo root, then `npm test`.",
   "scripts": {
     "serve": "python3 -m http.server 8899 --bind 127.0.0.1 --directory ..",
-    "test": "node regression.js && node output-checks.js",
+    "test": "node regression.js && node output-checks.js && node tool-pages.js",
+    "build-pages": "node ../scripts/build-pages.js",
     "fixtures": "node make_fixtures.js"
   },
   "devDependencies": {

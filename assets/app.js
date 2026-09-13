@@ -1,6 +1,12 @@
 "use strict";
 pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 const { PDFDocument, StandardFonts, rgb, degrees } = PDFLib;
+// Site root, derived from where this script was loaded from — correct whether the site is served at "/" (local),
+// under a project path like "/loomsheet/" (GitHub Pages), or on a custom domain. Every tool has its own real URL,
+// ROOT + slug + "/", and a static page there (see scripts/build-pages.js) so search engines index each tool separately.
+const ROOT = new URL("../", document.currentScript.src).href;
+const slugOf = t => t.name.toLowerCase().replace(/&/g," and ").replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
+const toolUrl = t => ROOT + slugOf(t) + "/";
 const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => [...r.querySelectorAll(s)];
 const fmt = b => b < 1024*1024 ? (b/1024).toFixed(0)+" KB" : (b/1024/1024).toFixed(2)+" MB";
@@ -58,7 +64,7 @@ function greet(){ const n=P.name.trim(); const h=new Date().getHours(), tod=h<5?
   $("#hero-title").textContent = n ? `${tod}, ${n}. What can we do with your PDF today?` : "Welcome to Loomsheet. What can we do with your PDF today?"; }
 function openPz(){ const p=$("#pz"); p.hidden=false; $("#pz-name").value=P.name; $("#pz-recent").checked=P.on("recent"); $("#pz-prefs").checked=P.on("prefs"); $("#pz-sig").checked=P.on("sig"); $("#pz-name").focus(); }
 $("#personalize-btn").onclick=()=>{ $("#pz").hidden ? openPz() : ($("#pz").hidden=true); };
-$("#foot-personalize").onclick=e=>{ e.preventDefault(); location.hash=""; showTool(""); openPz(); $("#pz").scrollIntoView({behavior:"smooth",block:"center"}); };
+$("#foot-personalize").onclick=e=>{ e.preventDefault(); go(""); openPz(); $("#pz").scrollIntoView({behavior:"smooth",block:"center"}); };
 $("#pz-save").onclick=()=>{ P.name=$("#pz-name").value.trim(); P.setOn("recent",$("#pz-recent").checked); P.setOn("prefs",$("#pz-prefs").checked); P.setOn("sig",$("#pz-sig").checked); if(!P.on("recent")) P.recent=[]; if(!P.on("sig")) store.set("pz:sig",""); $("#pz").hidden=true; greet(); buildHome($("#tool-search").value); toast("Saved on this device"); };
 $("#pz-reset").onclick=()=>{ if(!confirm("Clear your name, favorites, recent tools, saved settings, and signature from this browser?")) return; P.reset(); $("#pz").hidden=true; greet(); buildHome(); toast("Personalization cleared"); };
 
@@ -80,13 +86,13 @@ function restorePrefs(sheet,id){
 /* ---------- toast + share ---------- */
 const toastEl = el("div",{class:"toast"}); document.body.appendChild(toastEl); let toastT;
 function toast(msg){ toastEl.textContent=msg; toastEl.setAttribute("data-on",""); clearTimeout(toastT); toastT=setTimeout(()=>toastEl.removeAttribute("data-on"),2200); }
-async function shareTool(t){ const url=location.origin+location.pathname+"#"+t.id, data={title:`${t.name} — Loomsheet`,text:t.desc,url};
+async function shareTool(t){ const url=toolUrl(t), data={title:`${t.name} — Loomsheet`,text:t.desc,url};
   if(navigator.share){ try{ await navigator.share(data); return; }catch{} }
   try{ await navigator.clipboard.writeText(url); toast("Link copied"); }catch{ prompt("Copy this link:",url); } }
 document.addEventListener("keydown", e => { if(e.key==="Escape"){ $("#mega").removeAttribute("data-open"); $("#menu-btn").setAttribute("aria-expanded","false"); } });
 /* drop a file anywhere on the home page → jump to the right tool */
 document.addEventListener("dragover", e => { if($("#home").hasAttribute("data-active")) e.preventDefault(); });
-document.addEventListener("drop", e => { if(!$("#home").hasAttribute("data-active")) return; e.preventDefault(); const f=e.dataTransfer.files[0]; if(!f) return; location.hash = isPdf(f) ? "organize" : "any-to-pdf"; toast("Drop it again in the box below"); });
+document.addEventListener("drop", e => { if(!$("#home").hasAttribute("data-active")) return; e.preventDefault(); const f=e.dataTransfer.files[0]; if(!f) return; go(isPdf(f) ? "organize" : "any-to-pdf"); toast("Drop it again in the box below"); });
 
 async function renderPageCanvas(pdfjsDoc, pno, scale, bg="#fff"){
   const page = await pdfjsDoc.getPage(pno), vp = page.getViewport({scale});
@@ -247,29 +253,29 @@ const reg = t => TOOLS.push(t);
 const built = {};
 // Light up the top-nav link for the section the current tool belongs to (each link points at one representative tool).
 function markNav(t){
-  $$(".nav a").forEach(a=>{ const target=TOOLS.find(x=>x.id===a.getAttribute("href").slice(1)); const on=!!t && !!target && (target.id===t.id || target.cat===t.cat); a.toggleAttribute("data-active",on); if(on) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
+  $$(".nav a").forEach(a=>{ const r=routeFor(a.href); const target=r?TOOLS.find(x=>x.id===r):null; const on=!!t && !!target && (target.id===t.id || target.cat===t.cat); a.toggleAttribute("data-active",on); if(on) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
 }
 function showTool(id){
   $$(".tool").forEach(t=>t.removeAttribute("data-active"));
   const t = TOOLS.find(x=>x.id===id);
   markNav(t && !t.na ? t : null);
-  if(!t || t.na){ $("#home").setAttribute("data-active",""); window.scrollTo(0,0); document.title="Loomsheet — every PDF tool, right in your browser"; return; }
+  if(!t || t.na){ $("#home").setAttribute("data-active",""); window.scrollTo(0,0); document.title="Loomsheet — every PDF tool, right in your browser"; $('link[rel=canonical]')?.setAttribute("href", ROOT); return; }
   let sec = $("#tool-"+id);
   if(!sec){
-    sec = el("section",{class:"tool",id:"tool-"+id},`<div class="crumbs"><a href="#">All tools</a> / ${t.cat} / ${t.name}<button class="btn quiet share-btn fav-btn" data-favtool="${id}" ${isFav(id)?"data-on":""}>${isFav(id)?"★ Favorited":"☆ Favorite"}</button><button class="btn quiet share-btn" data-share>Share</button></div><div class="sheet" data-cc style="--cc:${CAT_COLOR[t.cat]}"></div>`);
+    sec = el("section",{class:"tool",id:"tool-"+id},`<div class="crumbs"><a href="${ROOT}">All tools</a> / ${t.cat} / ${t.name}<button class="btn quiet share-btn fav-btn" data-favtool="${id}" ${isFav(id)?"data-on":""}>${isFav(id)?"★ Favorited":"☆ Favorite"}</button><button class="btn quiet share-btn" data-share>Share</button></div><div class="sheet" data-cc style="--cc:${CAT_COLOR[t.cat]}"></div>`);
     $("[data-share]",sec).onclick=()=>shareTool(t); $("[data-favtool]",sec).onclick=()=>toggleFav(id);
     $("#tools").appendChild(sec); const sh=$(".sheet",sec); t.build(sh, t);
     const h2=$("h2",sh); if(h2){ const head=el("div",{class:"tool-head"},icon(t)); h2.replaceWith(head); head.appendChild(h2); }
     restorePrefs(sh,id);
   }
-  sec.setAttribute("data-active",""); window.scrollTo(0,0); noteRecent(id); document.title = t.name+" — Loomsheet"; $('meta[name=description]').setAttribute("content", t.desc+" Free, private, runs in your browser.");
+  sec.setAttribute("data-active",""); window.scrollTo(0,0); noteRecent(id); document.title = t.name+" — Loomsheet"; $('meta[name=description]').setAttribute("content", t.desc+" Free, private, runs in your browser."); $('link[rel=canonical]')?.setAttribute("href", toolUrl(t));
 }
-const cardHtml = t => t.na ? `<div class="card na" title="${esc(t.na)}">${icon(t)}<div><b>${t.name}</b><span>${t.na}</span></div></div>` : `<a class="card" href="#${t.id}" style="--cc:${CAT_COLOR[t.cat]}">${icon(t)}<div><b>${t.name}</b><span>${t.desc}</span></div><button class="fav" data-fav="${t.id}" ${isFav(t.id)?"data-on":""} title="${isFav(t.id)?"Remove from favorites":"Add to favorites"}" aria-label="Favorite">${isFav(t.id)?"★":"☆"}</button></a>`;
+const cardHtml = t => t.na ? `<div class="card na" title="${esc(t.na)}">${icon(t)}<div><b>${t.name}</b><span>${t.na}</span></div></div>` : `<a class="card" href="${toolUrl(t)}" style="--cc:${CAT_COLOR[t.cat]}">${icon(t)}<div><b>${t.name}</b><span>${t.desc}</span></div><button class="fav" data-fav="${t.id}" ${isFav(t.id)?"data-on":""} title="${isFav(t.id)?"Remove from favorites":"Add to favorites"}" aria-label="Favorite">${isFav(t.id)?"★":"☆"}</button></a>`;
 function buildHome(filter=""){
   const g=$("#home-grid"), m=$("#mega-in"); g.innerHTML=""; m.innerHTML=""; const f=filter.trim().toLowerCase(); let any=false;
   for(const c of CATS){
     let ts = TOOLS.filter(t=>t.cat===c); if(!ts.length) continue;
-    m.appendChild(el("div",{},`<h4>${c}</h4>${ts.filter(t=>!t.na).map(t=>`<a href="#${t.id}">${icon(t)}${t.name}</a>`).join("")}`));
+    m.appendChild(el("div",{},`<h4>${c}</h4>${ts.filter(t=>!t.na).map(t=>`<a href="${toolUrl(t)}">${icon(t)}${t.name}</a>`).join("")}`));
     if(f) ts=ts.filter(t=>(t.name+" "+(t.desc||"")+" "+c).toLowerCase().includes(f)); if(!ts.length) continue; any=true;
     g.appendChild(el("div",{class:"cat"},`<h3><i style="background:${CAT_COLOR[c]}"></i>${c}</h3><div class="grid">${ts.map(cardHtml).join("")}</div>`));
   }
@@ -279,7 +285,7 @@ function buildHome(filter=""){
   $("#recent-section").innerHTML = rec.length && !f ? `<div class="cat recent"><h3><i style="background:var(--ink-3)"></i>Recently used</h3><div class="grid">${rec.map(cardHtml).join("")}</div></div>` : "";
   $$("[data-fav]").forEach(b=>b.onclick=e=>{ e.preventDefault(); e.stopPropagation(); toggleFav(b.dataset.fav); });
   greet();
-  $("#popular").innerHTML = POPULAR.map(id=>TOOLS.find(t=>t.id===id)).filter(Boolean).map(t=>`<a href="#${t.id}">${icon(t)}${t.name}</a>`).join("");
+  $("#popular").innerHTML = POPULAR.map(id=>TOOLS.find(t=>t.id===id)).filter(Boolean).map(t=>`<a href="${toolUrl(t)}">${icon(t)}${t.name}</a>`).join("");
 }
 $("#tool-search").addEventListener("input", e => buildHome(e.target.value));
 document.addEventListener("keydown", e => { if(e.key==="/" && !/INPUT|TEXTAREA/.test(document.activeElement.tagName) && $("#home").hasAttribute("data-active")){ e.preventDefault(); $("#tool-search").focus(); } });
@@ -297,7 +303,36 @@ if(matchMedia("(hover:hover) and (pointer:fine)").matches){
 }
 // Give the sticky bar a shadow once the page is scrolled under it.
 { const bar=$(".bar"); const onScroll=()=>bar.toggleAttribute("data-scrolled",window.scrollY>8); window.addEventListener("scroll",onScroll,{passive:true}); onScroll(); }
-window.addEventListener("hashchange", () => { $("#mega").removeAttribute("data-open"); showTool(location.hash.slice(1)); });
+/* ---- routing ----
+   Each tool lives at ROOT + slug + "/" (a real page, so it can be indexed and linked). Inside the app, moving between
+   tools is still instant: link clicks are intercepted and the URL is updated with pushState. Old "#compress"-style
+   links keep working — they're turned into the matching pretty URL on load. */
+// Map an href to a tool id ("" = home) if it's a page of this site, else null.
+function routeFor(href){
+  let u; try{ u=new URL(href, location.href); }catch{ return null; }
+  if(!u.href.startsWith(ROOT)) return null;
+  const seg=u.href.slice(ROOT.length).replace(/[?#].*$/,"").replace(/index\.html$/,"").replace(/\/+$/,"");
+  if(!seg) return "";
+  const t=TOOLS.find(x=>!x.na && slugOf(x)===seg); return t ? t.id : null;
+}
+// Work out which tool the current address means, upgrading legacy #id hashes to the real URL.
+function currentRoute(){
+  const h=location.hash.slice(1);
+  if(h){ const t=TOOLS.find(x=>x.id===h); history.replaceState(null,"", t && !t.na ? toolUrl(t) : ROOT); return t && !t.na ? t.id : ""; }
+  const r=routeFor(location.href); return r==null ? "" : r;
+}
+function go(id, replace=false){
+  const t=TOOLS.find(x=>x.id===id); const url=t && !t.na ? toolUrl(t) : ROOT;
+  if(url!==location.href) history[replace?"replaceState":"pushState"](null,"",url);
+  $("#mega").removeAttribute("data-open"); $("#menu-btn").setAttribute("aria-expanded","false");
+  showTool(t && !t.na ? id : "");
+}
+document.addEventListener("click", e => {
+  const a=e.target.closest("a[href]"); if(!a || e.defaultPrevented || e.button!==0 || e.metaKey||e.ctrlKey||e.shiftKey||e.altKey || a.target==="_blank" || a.hasAttribute("download")) return;
+  const r=routeFor(a.href); if(r==null) return; e.preventDefault(); go(r);
+});
+window.addEventListener("popstate", () => showTool(currentRoute()));
+window.addEventListener("hashchange", () => { $("#mega").removeAttribute("data-open"); showTool(currentRoute()); });
 
 /* ================= COMPRESS ================= */
 reg({ id:"compress", cat:"Compress", name:"Compress PDF", desc:"Make a PDF smaller, with or without keeping text selectable.", build(root){
@@ -1047,4 +1082,4 @@ reg({ id:"about", cat:"About", name:"About", desc:"What Loomsheet provides.", bu
 }});
 
 /* ================= boot ================= */
-buildHome(); showTool(location.hash.slice(1));
+buildHome(); showTool(currentRoute());
