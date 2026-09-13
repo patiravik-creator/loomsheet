@@ -245,9 +245,14 @@ const CATS = ["Compress","Convert from PDF","Convert to PDF","Organize","Edit","
 const TOOLS = [];
 const reg = t => TOOLS.push(t);
 const built = {};
+// Light up the top-nav link for the section the current tool belongs to (each link points at one representative tool).
+function markNav(t){
+  $$(".nav a").forEach(a=>{ const target=TOOLS.find(x=>x.id===a.getAttribute("href").slice(1)); const on=!!t && !!target && (target.id===t.id || target.cat===t.cat); a.toggleAttribute("data-active",on); if(on) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
+}
 function showTool(id){
   $$(".tool").forEach(t=>t.removeAttribute("data-active"));
   const t = TOOLS.find(x=>x.id===id);
+  markNav(t && !t.na ? t : null);
   if(!t || t.na){ $("#home").setAttribute("data-active",""); window.scrollTo(0,0); document.title="Loomsheet — every PDF tool, right in your browser"; return; }
   let sec = $("#tool-"+id);
   if(!sec){
@@ -278,8 +283,20 @@ function buildHome(filter=""){
 }
 $("#tool-search").addEventListener("input", e => buildHome(e.target.value));
 document.addEventListener("keydown", e => { if(e.key==="/" && !/INPUT|TEXTAREA/.test(document.activeElement.tagName) && $("#home").hasAttribute("data-active")){ e.preventDefault(); $("#tool-search").focus(); } });
-$("#menu-btn").onclick = () => { const o=$("#mega").hasAttribute("data-open"); $("#mega").toggleAttribute("data-open",!o); $("#menu-btn").setAttribute("aria-expanded",!o); };
-document.addEventListener("click", e => { if(!e.target.closest(".bar")) { $("#mega").removeAttribute("data-open"); $("#menu-btn").setAttribute("aria-expanded","false"); } });
+const setMega = open => { $("#mega").toggleAttribute("data-open",open); $("#menu-btn").setAttribute("aria-expanded",open); };
+$("#menu-btn").onclick = () => setMega(!$("#mega").hasAttribute("data-open"));
+document.addEventListener("click", e => { if(!e.target.closest(".bar")) setMega(false); });
+// Mouse users: "All tools" opens on hover and closes when the pointer leaves the bar/menu. Touch and keyboard keep the click/Enter toggle.
+if(matchMedia("(hover:hover) and (pointer:fine)").matches){
+  let openT=0, closeT=0;
+  const bar=$(".bar");
+  $("#menu-btn").addEventListener("mouseenter", () => { clearTimeout(closeT); openT=setTimeout(()=>setMega(true),120); });
+  $("#menu-btn").addEventListener("mouseleave", () => clearTimeout(openT));
+  bar.addEventListener("mouseleave", () => { clearTimeout(openT); closeT=setTimeout(()=>setMega(false),220); });
+  bar.addEventListener("mouseenter", () => clearTimeout(closeT));
+}
+// Give the sticky bar a shadow once the page is scrolled under it.
+{ const bar=$(".bar"); const onScroll=()=>bar.toggleAttribute("data-scrolled",window.scrollY>8); window.addEventListener("scroll",onScroll,{passive:true}); onScroll(); }
 window.addEventListener("hashchange", () => { $("#mega").removeAttribute("data-open"); showTool(location.hash.slice(1)); });
 
 /* ================= COMPRESS ================= */
