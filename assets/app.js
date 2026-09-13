@@ -279,9 +279,13 @@ function showTool(id){
 const cardHtml = t => t.na ? `<div class="card na" title="${esc(t.na)}">${icon(t)}<div><b>${t.name}</b><span>${t.na}</span></div></div>` : `<a class="card" href="${toolUrl(t)}" style="--cc:${CAT_COLOR[t.cat]}">${icon(t)}<div><b>${t.name}</b><span>${t.desc}</span></div><button class="fav" data-fav="${t.id}" ${isFav(t.id)?"data-on":""} title="${isFav(t.id)?"Remove from favorites":"Add to favorites"}" aria-label="Favorite">${isFav(t.id)?"★":"☆"}</button></a>`;
 function buildHome(filter=""){
   const g=$("#home-grid"), m=$("#mega-in"); g.innerHTML=""; m.innerHTML=""; const f=filter.trim().toLowerCase(); let any=false;
+  // "All tools" menu: pack categories into columns, each new category going to the shortest column so far, so short
+  // categories stack under each other and the menu stays one band instead of a grid with an empty row.
+  const w=m.clientWidth||document.documentElement.clientWidth, ncols=w>=980?5:w>=780?4:w>=560?3:2;
+  const cols=Array.from({length:ncols},()=>({h:0,el:el("div",{class:"mega-col"})})); cols.forEach(c=>m.appendChild(c.el));
   for(const c of CATS){
     let ts = TOOLS.filter(t=>t.cat===c && !t.hidden); if(!ts.length) continue;
-    m.appendChild(el("div",{},`<h4>${c}</h4>${ts.filter(t=>!t.na).map(t=>`<a href="${toolUrl(t)}">${icon(t)}${t.name}</a>`).join("")}`));
+    const live=ts.filter(t=>!t.na); if(live.length){ const col=cols.reduce((a,b)=>b.h<a.h?b:a); col.el.appendChild(el("div",{},`<h4>${c}</h4>${live.map(t=>`<a href="${toolUrl(t)}">${icon(t)}${t.name}</a>`).join("")}`)); col.h+=live.length+1.6; }
     if(f) ts=ts.filter(t=>(t.name+" "+(t.desc||"")+" "+c).toLowerCase().includes(f)); if(!ts.length) continue; any=true;
     g.appendChild(el("div",{class:"cat"},`<h3><i style="background:${CAT_COLOR[c]}"></i>${c}</h3><div class="grid">${ts.map(cardHtml).join("")}</div>`));
   }
@@ -307,6 +311,8 @@ if(matchMedia("(hover:hover) and (pointer:fine)").matches){
   bar.addEventListener("mouseleave", () => { clearTimeout(openT); closeT=setTimeout(()=>setMega(false),220); });
   bar.addEventListener("mouseenter", () => clearTimeout(closeT));
 }
+// Re-pack the "All tools" menu when the width changes enough to alter its column count.
+{ let last=0, t; window.addEventListener("resize", () => { clearTimeout(t); t=setTimeout(()=>{ const w=document.documentElement.clientWidth, n=w>=980?5:w>=780?4:w>=560?3:2; if(n!==last){ last=n; buildHome($("#tool-search")?.value||""); } },150); }); last=(()=>{ const w=document.documentElement.clientWidth; return w>=980?5:w>=780?4:w>=560?3:2; })(); }
 // Give the sticky bar a shadow once the page is scrolled under it.
 { const bar=$(".bar"); const onScroll=()=>bar.toggleAttribute("data-scrolled",window.scrollY>8); window.addEventListener("scroll",onScroll,{passive:true}); onScroll(); }
 /* ---- routing ----

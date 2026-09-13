@@ -57,7 +57,9 @@
   .mega{display:none;position:absolute;left:0;right:0;top:56px;background:var(--sheet);border-bottom:1px solid var(--rule);box-shadow:0 12px 30px var(--shadow);max-height:calc(100vh - 56px);overflow:auto}
   .mega[data-open]{display:block;animation:mega-in .18s ease-out}
   @keyframes mega-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
-  .mega-in{max-width:1100px;margin:0 auto;padding:24px;display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:22px 18px}
+  /* Categories are packed into columns by app.js (shortest column first) so the menu is one band. */
+  .mega-in{max-width:1100px;margin:0 auto;padding:24px;display:flex;gap:18px;align-items:flex-start}
+  .mega-col{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:20px}
   .mega h4{margin:0 0 8px;font-size:13px;font-weight:600;color:var(--ink-3)}
   .mega a{display:flex;align-items:center;gap:8px;color:var(--ink);text-decoration:none;padding:4px 0;font-size:15px;transition:color .15s,transform .15s}
   .mega a:hover,.mega a:focus-visible{color:var(--accent);transform:translateX(3px)}
