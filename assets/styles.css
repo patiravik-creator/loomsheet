@@ -66,7 +66,9 @@
   .dd-label{margin:6px 10px 4px;font-size:12px;font-weight:600;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em}
   .dd a{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:7px;color:var(--ink);text-decoration:none;font-size:14.5px;white-space:nowrap;transition:background-color .12s,color .12s}
   .dd a:hover,.dd a:focus-visible{background:var(--paper);color:var(--accent)}
-  .dd a[data-current]{background:color-mix(in srgb,var(--accent) 12%,var(--sheet));color:var(--accent);font-weight:600}
+  /* "You are here" in a dropdown. The background must not be tinted toward the accent: in dark mode the accent is
+     lighter than the sheet, so tinting moved the background toward the text colour and dropped it to 4.15:1. */
+  .dd a[data-current]{background:var(--paper);color:var(--accent);font-weight:600;box-shadow:inset 2px 0 0 var(--accent)}
   .dd .ic{width:24px;height:24px;border-radius:6px}.dd .ic svg{width:14px;height:14px;stroke-width:2.2}
   .menu-btn{background:var(--paper);border:1px solid var(--rule);border-radius:4px;padding:7px 12px;cursor:pointer;color:var(--ink);white-space:nowrap;transition:border-color .18s,background-color .18s,box-shadow .18s}
   .menu-btn:hover{border-color:var(--ink-3)}

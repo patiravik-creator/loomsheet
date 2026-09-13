@@ -19,6 +19,13 @@ const findings = [];   // WCAG A/AA violations
 const advisory = [];   // best-practice (not required for AA)
 const manual = [];     // keyboard/focus checks done by hand
 
+// Let CSS animations finish before measuring: axe samples computed colours, and a panel caught mid-fade
+// reports blended values that depend on how fast the machine is.
+async function settle(page) {
+  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))));
+  await page.waitForTimeout(120);
+}
+
 async function axeOn(page, label, opts = {}) {
   await page.addScriptTag({ path: AXE });
   const res = await page.evaluate(async (ctx) => {
@@ -30,7 +37,16 @@ async function axeOn(page, label, opts = {}) {
     (wcag ? findings : advisory).push({
       label, id: v.id, impact: v.impact, help: v.help,
       tags: v.tags.filter((t) => t.startsWith("wcag")).join(","),
-      nodes: v.nodes.map((n) => ({ target: n.target.join(" "), summary: (n.failureSummary || "").split("\n").filter(Boolean).slice(1).join(" ").trim(), html: n.html.slice(0, 120) })),
+      nodes: v.nodes.map((n) => {
+        // Pull axe's own measurements (colours, ratios) out of the check data so the log explains itself.
+        const d = [...(n.any || []), ...(n.all || []), ...(n.none || [])].map((c) => c.data).find((x) => x && x.contrastRatio !== undefined);
+        return {
+          target: n.target.join(" "),
+          data: d ? `${d.fgColor} on ${d.bgColor} = ${d.contrastRatio}:1 (needs ${d.expectedContrastRatio}, ${d.fontSize} ${d.fontWeight})` : "",
+          summary: (n.failureSummary || "").split("\n").filter(Boolean).slice(1).join(" ").trim(),
+          html: n.html.slice(0, 120),
+        };
+      }),
     });
   }
 }
@@ -67,12 +83,13 @@ const PAGES = [
 
     await page.click("#menu-btn");
     await page.click(".mega-cat .mega-head:has-text('Convert')");
-    await page.waitForTimeout(200);
+    await settle(page);
     await axeOn(page, "All-tools menu, Convert expanded");
 
     await page.keyboard.press("Escape");
     await page.hover(".nav > .nav-item[data-cats^='Convert'] > a");
     await page.waitForSelector(".nav > .nav-item[data-cats^='Convert'] .dd", { state: "visible" });
+    await settle(page);
     await axeOn(page, "header dropdown open");
 
     await page.goto(BASE + "compress-pdf/", { waitUntil: "load" });
@@ -90,6 +107,20 @@ const PAGES = [
     await page.click("#personalize-btn");
     await page.waitForTimeout(200);
     await axeOn(page, "personalize panel open");
+    await page.close();
+  }
+
+  // The same dropdown opened while one of its own tools is showing, so the "current tool" highlight is audited too.
+  for (const theme of ["light", "dark"]) {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, colorScheme: theme });
+    await page.goto(BASE + "word-to-pdf/", { waitUntil: "load" });
+    await page.evaluate((t) => document.documentElement.setAttribute("data-theme", t), theme);
+    await page.hover(".nav > .nav-item[data-cats^='Convert'] > a");
+    await page.waitForSelector(".nav > .nav-item[data-cats^='Convert'] .dd", { state: "visible" });
+    await settle(page);
+    const marked = await page.$$eval(".dd a[data-current]", (a) => a.length);
+    if (!marked) throw new Error("expected the current tool to be marked in the dropdown");
+    await axeOn(page, `header dropdown open on its own tool [${theme}]`);
     await page.close();
   }
 
@@ -189,8 +220,8 @@ const PAGES = [
       console.log(`\n  [${(r.impact || "n/a").toUpperCase()}] ${r.id} — ${r.help}`);
       console.log(`      ${r.tags || "best practice"} · ${r.count} element(s) · ${r.where.size} view(s): ${[...r.where].slice(0, 3).join("; ")}${r.where.size > 3 ? ` +${r.where.size - 3} more` : ""}`);
       const sample = list.find((f) => f.id === r.id).nodes;
-      for (const n of sample.slice(0, FULL ? 50 : 2)) console.log(`      · ${n.target}  ${n.summary ? "— " + n.summary.slice(0, 150) : ""}`);
-      if (!FULL && sample.length > 2) console.log(`      · …${sample.length - 2} more (run with --full)`);
+      for (const n of sample.slice(0, FULL ? 50 : 4)) console.log(`      · ${n.target}\n          ${n.data || (n.summary || "").slice(0, 160)}`);
+      if (!FULL && sample.length > 4) console.log(`      · …${sample.length - 4} more (run with --full)`);
     }
   };
 
