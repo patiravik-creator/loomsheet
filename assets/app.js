@@ -42,6 +42,41 @@ const LIBS = { mammoth:"https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mam
 const libLoading = {};
 function need(name){ if(window[name]) return Promise.resolve(window[name]); return libLoading[name] ||= new Promise((res,rej)=>{ const s=document.createElement("script"); s.src=LIBS[name]; s.onload=()=>res(window[name]); s.onerror=()=>{ delete libLoading[name]; rej(new Error("Couldn't load a required library. Check your connection and try again.")); }; document.head.appendChild(s); }); }
 
+/* ---------- personalization (device-local) ---------- */
+const P = {
+  get name(){ return store.get("pz:name")||""; }, set name(v){ store.set("pz:name",v); },
+  on(k){ const v=store.get("pz:"+k); return v===null ? true : v==="1"; }, setOn(k,v){ store.set("pz:"+k, v?"1":"0"); },
+  get favs(){ try{ return JSON.parse(store.get("pz:favs")||"[]"); }catch{ return []; } }, set favs(a){ store.set("pz:favs",JSON.stringify(a)); },
+  get recent(){ try{ return JSON.parse(store.get("pz:recent")||"[]"); }catch{ return []; } }, set recent(a){ store.set("pz:recent",JSON.stringify(a)); },
+  prefs(id){ try{ return JSON.parse(store.get("pz:prefs:"+id)||"{}"); }catch{ return {}; } }, setPrefs(id,o){ store.set("pz:prefs:"+id,JSON.stringify(o)); },
+  reset(){ try{ Object.keys(localStorage).filter(k=>k.startsWith("pz:")).forEach(k=>localStorage.removeItem(k)); }catch{} }
+};
+function isFav(id){ return P.favs.includes(id); }
+function toggleFav(id){ const f=P.favs; const i=f.indexOf(id); i>=0?f.splice(i,1):f.push(id); P.favs=f; buildHome($("#tool-search").value); $$("[data-favtool]").forEach(b=>{ if(b.dataset.favtool===id){ b.toggleAttribute("data-on",isFav(id)); b.textContent=isFav(id)?"★ Favorited":"☆ Favorite"; } }); toast(isFav(id)?"Added to favorites":"Removed from favorites"); }
+function noteRecent(id){ if(!P.on("recent")) return; const r=P.recent.filter(x=>x!==id); r.unshift(id); P.recent=r.slice(0,6); }
+function greet(){ const n=P.name.trim(); const h=new Date().getHours(), tod=h<5?"Working late":h<12?"Good morning":h<17?"Good afternoon":"Good evening";
+  $("#hero-title").textContent = n ? `${tod}, ${n}. What can we do with your PDF today?` : "Welcome to SheetSimple. What can we do with your PDF today?"; }
+function openPz(){ const p=$("#pz"); p.hidden=false; $("#pz-name").value=P.name; $("#pz-recent").checked=P.on("recent"); $("#pz-prefs").checked=P.on("prefs"); $("#pz-sig").checked=P.on("sig"); $("#pz-name").focus(); }
+$("#personalize-btn").onclick=()=>{ $("#pz").hidden ? openPz() : ($("#pz").hidden=true); };
+$("#foot-personalize").onclick=e=>{ e.preventDefault(); location.hash=""; showTool(""); openPz(); $("#pz").scrollIntoView({behavior:"smooth",block:"center"}); };
+$("#pz-save").onclick=()=>{ P.name=$("#pz-name").value.trim(); P.setOn("recent",$("#pz-recent").checked); P.setOn("prefs",$("#pz-prefs").checked); P.setOn("sig",$("#pz-sig").checked); if(!P.on("recent")) P.recent=[]; if(!P.on("sig")) store.set("pz:sig",""); $("#pz").hidden=true; greet(); buildHome($("#tool-search").value); toast("Saved on this device"); };
+$("#pz-reset").onclick=()=>{ if(!confirm("Clear your name, favorites, recent tools, saved settings, and signature from this browser?")) return; P.reset(); $("#pz").hidden=true; greet(); buildHome(); toast("Personalization cleared"); };
+
+/* remember tool settings: any option control inside .options (never passwords) */
+document.addEventListener("change", e => {
+  const inp=e.target, sheet=inp.closest(".sheet"), opts=inp.closest(".options"); if(!sheet||!opts||!P.on("prefs")) return;
+  if(inp.type==="password"||inp.type==="file"||inp.dataset.nosave!==undefined) return;
+  const id=sheet.closest(".tool").id.replace("tool-",""), key=inp.name||inp.dataset.pref||inp.id||inp.getAttribute("data-m")||[...inp.attributes].map(a=>a.name).find(n=>n.startsWith("data-")); if(!key) return;
+  const o=P.prefs(id); o[key]= inp.type==="checkbox"?inp.checked : inp.value; P.setPrefs(id,o);
+});
+function restorePrefs(sheet,id){
+  if(!P.on("prefs")) return; const o=P.prefs(id); if(!Object.keys(o).length) return;
+  for(const [k,v] of Object.entries(o)){
+    let inp = $$(`.options [name="${k}"]`,sheet); if(inp.length){ inp.forEach(r=>{ if(r.type==="radio"){ if(r.value===v){ r.checked=true; r.dispatchEvent(new Event("change",{bubbles:false})); r.onchange&&r.onchange(); } } else { r.type==="checkbox"?r.checked=v:r.value=v; } }); continue; }
+    const one = $(`.options #${CSS.escape(k)}`,sheet) || $(`.options [data-pref="${k}"]`,sheet) || $(`.options [${k}]`,sheet); if(one && one.type!=="password"){ one.type==="checkbox"?one.checked=v:one.value=v; one.oninput&&one.oninput({target:one}); one.onchange&&one.onchange({target:one}); }
+  }
+}
+
 /* ---------- toast + share ---------- */
 const toastEl = el("div",{class:"toast"}); document.body.appendChild(toastEl); let toastT;
 function toast(msg){ toastEl.textContent=msg; toastEl.setAttribute("data-on",""); clearTimeout(toastT); toastT=setTimeout(()=>toastEl.removeAttribute("data-on"),2200); }
@@ -212,14 +247,15 @@ function showTool(id){
   if(!t || t.na){ $("#home").setAttribute("data-active",""); window.scrollTo(0,0); document.title="SheetSimple — every PDF tool, right in your browser"; return; }
   let sec = $("#tool-"+id);
   if(!sec){
-    sec = el("section",{class:"tool",id:"tool-"+id},`<div class="crumbs"><a href="#">All tools</a> / ${t.cat} / ${t.name}<button class="btn quiet share-btn" data-share>Share</button></div><div class="sheet" data-cc style="--cc:${CAT_COLOR[t.cat]}"></div>`);
-    $("[data-share]",sec).onclick=()=>shareTool(t);
+    sec = el("section",{class:"tool",id:"tool-"+id},`<div class="crumbs"><a href="#">All tools</a> / ${t.cat} / ${t.name}<button class="btn quiet share-btn fav-btn" data-favtool="${id}" ${isFav(id)?"data-on":""}>${isFav(id)?"★ Favorited":"☆ Favorite"}</button><button class="btn quiet share-btn" data-share>Share</button></div><div class="sheet" data-cc style="--cc:${CAT_COLOR[t.cat]}"></div>`);
+    $("[data-share]",sec).onclick=()=>shareTool(t); $("[data-favtool]",sec).onclick=()=>toggleFav(id);
     $("#tools").appendChild(sec); const sh=$(".sheet",sec); t.build(sh, t);
     const h2=$("h2",sh); if(h2){ const head=el("div",{class:"tool-head"},icon(t)); h2.replaceWith(head); head.appendChild(h2); }
+    restorePrefs(sh,id);
   }
-  sec.setAttribute("data-active",""); window.scrollTo(0,0); document.title = t.name+" — SheetSimple"; $('meta[name=description]').setAttribute("content", t.desc+" Free, private, runs in your browser.");
+  sec.setAttribute("data-active",""); window.scrollTo(0,0); noteRecent(id); document.title = t.name+" — SheetSimple"; $('meta[name=description]').setAttribute("content", t.desc+" Free, private, runs in your browser.");
 }
-const cardHtml = t => t.na ? `<div class="card na" title="${esc(t.na)}">${icon(t)}<div><b>${t.name}</b><span>${t.na}</span></div></div>` : `<a class="card" href="#${t.id}" style="--cc:${CAT_COLOR[t.cat]}">${icon(t)}<div><b>${t.name}</b><span>${t.desc}</span></div></a>`;
+const cardHtml = t => t.na ? `<div class="card na" title="${esc(t.na)}">${icon(t)}<div><b>${t.name}</b><span>${t.na}</span></div></div>` : `<a class="card" href="#${t.id}" style="--cc:${CAT_COLOR[t.cat]}">${icon(t)}<div><b>${t.name}</b><span>${t.desc}</span></div><button class="fav" data-fav="${t.id}" ${isFav(t.id)?"data-on":""} title="${isFav(t.id)?"Remove from favorites":"Add to favorites"}" aria-label="Favorite">${isFav(t.id)?"★":"☆"}</button></a>`;
 function buildHome(filter=""){
   const g=$("#home-grid"), m=$("#mega-in"); g.innerHTML=""; m.innerHTML=""; const f=filter.trim().toLowerCase(); let any=false;
   for(const c of CATS){
@@ -229,6 +265,11 @@ function buildHome(filter=""){
     g.appendChild(el("div",{class:"cat"},`<h3><i style="background:${CAT_COLOR[c]}"></i>${c}</h3><div class="grid">${ts.map(cardHtml).join("")}</div>`));
   }
   if(!any) g.innerHTML=`<p class="no-match">No tool matches "${esc(filter)}". Try another word, like "merge", "word", or "sign".</p>`;
+  const favs=P.favs.map(id=>TOOLS.find(t=>t.id===id)).filter(Boolean), rec=P.on("recent")?P.recent.map(id=>TOOLS.find(t=>t.id===id)).filter(t=>t&&!favs.includes(t)):[];
+  $("#fav-section").innerHTML = favs.length && !f ? `<div class="cat recent"><h3><i style="background:#E0A100"></i>Your favorites</h3><div class="grid">${favs.map(cardHtml).join("")}</div></div>` : "";
+  $("#recent-section").innerHTML = rec.length && !f ? `<div class="cat recent"><h3><i style="background:var(--ink-3)"></i>Recently used</h3><div class="grid">${rec.map(cardHtml).join("")}</div></div>` : "";
+  $$("[data-fav]").forEach(b=>b.onclick=e=>{ e.preventDefault(); e.stopPropagation(); toggleFav(b.dataset.fav); });
+  greet();
   $("#popular").innerHTML = POPULAR.map(id=>TOOLS.find(t=>t.id===id)).filter(Boolean).map(t=>`<a href="#${t.id}">${icon(t)}${t.name}</a>`).join("");
 }
 $("#tool-search").addEventListener("input", e => buildHome(e.target.value));
@@ -608,6 +649,7 @@ function editorTool(cfg){
         <div class="subpanel" data-sub="type" hidden><label style="font-weight:500">Type your name</label><input class="sigtype" data-sig-name placeholder="Your name">
           <div class="actions"><button class="btn" data-type-use>Place signature</button><button class="btn quiet" data-cancel>Cancel</button></div></div>
         <input type="file" accept="image/*" data-img-in hidden>
+        <div class="sig-saved" data-sig-saved hidden><img data-sig-img alt="Saved signature"><span style="flex:1;color:var(--ink-2);font-size:14px">Your saved signature</span><button class="btn quiet" data-sig-place>Place it</button><button class="icon-btn" data-sig-forget title="Forget saved signature">✕</button></div>
         <p class="hint" style="color:var(--ink-2);font-size:14px;margin:0 0 10px">${cfg.hint||"Drag anything to move it; drag the blue corner to resize. Delete removes the selected item."}</p>
         <div class="editor"><div class="pagewrap"><canvas data-canvas></canvas><div class="overlay" data-overlay></div></div></div>
         <div class="actions"><button class="btn quiet" data-del hidden>Remove selected</button></div>
@@ -615,7 +657,10 @@ function editorTool(cfg){
     const q=s=>$(s,root), ui=q(".ed-ui"), ov=q("[data-overlay]"), cv=q("[data-canvas]");
     const ed={pdf:null,buf:null,n:0,cur:1,items:{},sel:null,ptW:0,ptH:0,inking:false}; const ratio=()=>ed.ptW/ov.clientWidth; const pageItems=()=>ed.items[ed.cur] ||= [];
     let file=null; const dz=dropZone({onChange:async f=>{ file=f[0]||null; btn.disabled=!file; if(file) await open(file); else ui.hidden=true; }}); q("[data-drop]").replaceWith(dz.el);
-    async function open(f){ ed.buf=await f.arrayBuffer(); ed.pdf=await loadPdfjs(ed.buf); ed.n=ed.pdf.numPages; ed.cur=1; ed.items={}; ed.sel=null; ui.hidden=false; await renderPage(); }
+    async function open(f){ ed.buf=await f.arrayBuffer(); ed.pdf=await loadPdfjs(ed.buf); ed.n=ed.pdf.numPages; ed.cur=1; ed.items={}; ed.sel=null; ui.hidden=false; await renderPage(); showSavedSig(); }
+    function showSavedSig(){ const s=P.on("sig")&&cfg.tools.includes("draw")?store.get("pz:sig"):""; const box=q("[data-sig-saved]"); if(s){ q("[data-sig-img]").src=s; box.hidden=false; } else box.hidden=true; }
+    q("[data-sig-place]").onclick=()=>{ const s=store.get("pz:sig"); if(!s) return; const im=new Image(); im.onload=()=>{ const w=Math.min(220,ov.clientWidth*0.4),h=w*im.height/im.width; add({type:"image",x:40,y:Math.max(0,ov.clientHeight-h-40),w,h,url:s}); }; im.src=s; };
+    q("[data-sig-forget]").onclick=()=>{ store.set("pz:sig",""); showSavedSig(); toast("Signature forgotten"); };
     async function renderPage(){ const page=await ed.pdf.getPage(ed.cur), base=page.getViewport({scale:1}); ed.ptW=base.width; ed.ptH=base.height;
       const vp=page.getViewport({scale:Math.min(2.5,(720*Math.max(1,devicePixelRatio))/base.width)}); cv.width=Math.ceil(vp.width); cv.height=Math.ceil(vp.height);
       await page.render({canvasContext:cv.getContext("2d"),viewport:vp}).promise; q("[data-label]").textContent=`Page ${ed.cur} of ${ed.n}`; q("[data-prev]").disabled=ed.cur===1; q("[data-next]").disabled=ed.cur===ed.n; draw(); }
@@ -664,7 +709,8 @@ function editorTool(cfg){
     function placeImage(c){ const cx=c.getContext("2d"),d=cx.getImageData(0,0,c.width,c.height).data; let minx=c.width,miny=c.height,maxx=0,maxy=0;
       for(let y=0;y<c.height;y++) for(let x=0;x<c.width;x++) if(d[(y*c.width+x)*4+3]>10){ if(x<minx)minx=x; if(x>maxx)maxx=x; if(y<miny)miny=y; if(y>maxy)maxy=y; }
       const t=document.createElement("canvas"); t.width=maxx-minx+21; t.height=maxy-miny+21; t.getContext("2d").drawImage(c,minx-10,miny-10,t.width,t.height,0,0,t.width,t.height);
-      const url=t.toDataURL("image/png"),w=Math.min(220,ov.clientWidth*0.4),h=w*t.height/t.width; add({type:"image",x:40,y:Math.max(0,ov.clientHeight-h-40),w,h,url}); }
+      const url=t.toDataURL("image/png"),w=Math.min(220,ov.clientWidth*0.4),h=w*t.height/t.width; add({type:"image",x:40,y:Math.max(0,ov.clientHeight-h-40),w,h,url});
+      if(P.on("sig")){ store.set("pz:sig",url); showSavedSig(); } }
     const st=statusBox(root);
     const btn=runButton(root,cfg.saveLabel||"Save PDF",async st=>{
       st.set("Applying changes…");

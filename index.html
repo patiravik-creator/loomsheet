@@ -44,11 +44,22 @@
 <div class="wrap">
   <div class="tool" id="home" data-active>
     <div class="hero">
-      <h1>Welcome to SheetSimple. What can we do with your PDF today?</h1>
+      <h1 id="hero-title">Welcome to SheetSimple. What can we do with your PDF today?</h1>
       <p>Pick a tool below or just start typing. Everything runs in this browser tab, so your files stay on your device — no sign-up, no uploads, no waiting.</p>
       <label class="search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" id="tool-search" placeholder="Search tools… e.g. merge, word, sign" autocomplete="off"><kbd>/</kbd></label>
       <div class="popular" id="popular"></div>
+      <button class="link-btn" id="personalize-btn">Personalize</button>
+      <div class="pz" id="pz" hidden>
+        <div class="field"><label for="pz-name">What should we call you?</label><input type="text" id="pz-name" placeholder="Your first name" maxlength="30" autocomplete="given-name"></div>
+        <label class="switch"><input type="checkbox" id="pz-recent" checked> Show my recently used tools</label>
+        <label class="switch"><input type="checkbox" id="pz-prefs" checked> Remember my settings in each tool</label>
+        <label class="switch"><input type="checkbox" id="pz-sig" checked> Keep my signature for reuse</label>
+        <p class="hint">All of this is stored only in this browser. Nothing is sent anywhere.</p>
+        <div class="actions"><button class="btn" id="pz-save">Save</button><button class="btn quiet" id="pz-reset">Reset everything</button></div>
+      </div>
     </div>
+    <div id="fav-section"></div>
+    <div id="recent-section"></div>
     <div id="home-grid"></div>
   </div>
   <div id="tools"></div>
@@ -56,12 +67,13 @@
     <div class="foot-grid">
       <div><b>SheetSimple</b><p>Free PDF tools that run in your browser. Nothing is uploaded; close the tab and everything is gone. Very large files depend on your device's memory.</p></div>
       <div><b>Popular</b><a href="#compress">Compress PDF</a><a href="#merge">Merge PDF</a><a href="#pdf-to-word">PDF to Word</a><a href="#sign">Sign PDF</a><a href="#ai">AI PDF Assistant</a></div>
-      <div><b>More</b><a href="#organize">Organize pages</a><a href="#ocr">PDF OCR</a><a href="#scanner">Scanner</a><a href="#any-to-pdf">Convert to PDF</a><a href="https://github.com/patiravik-creator/sheetSimple" rel="noopener">Source on GitHub</a></div>
+      <div><b>More</b><a href="#organize">Organize pages</a><a href="#ocr">PDF OCR</a><a href="#scanner">Scanner</a><a href="#any-to-pdf">Convert to PDF</a><a href="#extract-images">Extract images</a></div>
     </div>
-    <p class="foot-note">Made with pdf-lib, pdf.js, Tesseract.js and friends. Install it as an app from your browser menu to use it offline-first.</p>
+    <p class="foot-note">© <span id="year"></span> SheetSimple · No accounts, no uploads, no tracking · <a href="#" id="foot-personalize">Personalize</a> · Tip: install it as an app from your browser menu.</p>
   </footer>
 </div>
 <script src="assets/app.js"></script>
+<script>document.getElementById("year").textContent=new Date().getFullYear();</script>
 <!-- Optional privacy-friendly analytics (no cookies). Sign up at goatcounter.com, then uncomment and set your code:
 <script data-goatcounter="https://YOURCODE.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
 -->
