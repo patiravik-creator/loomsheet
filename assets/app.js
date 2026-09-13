@@ -1082,4 +1082,7 @@ reg({ id:"about", cat:"About", name:"About", desc:"What Loomsheet provides.", bu
 }});
 
 /* ================= boot ================= */
+// The static links in the HTML are relative ("sign-pdf/" or "../sign-pdf/") so a page works wherever it's loaded from,
+// but once pushState has changed the address a relative link would resolve against the new folder. Make them absolute once, at load.
+$$("a[href]").forEach(a=>{ if(a.getAttribute("href")==="#") return; const r=routeFor(a.href); if(r===null) return; const t=r&&TOOLS.find(x=>x.id===r); a.setAttribute("href", t?toolUrl(t):ROOT); });
 buildHome(); showTool(currentRoute());

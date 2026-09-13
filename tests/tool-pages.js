@@ -71,6 +71,21 @@ const ok = (name, pass, detail = "") => { results.push({ name, pass }); console.
   await page.waitForFunction(() => document.querySelector("#home").hasAttribute("data-active"), null, { timeout: 5000 });
   ok("back again returns home", await page.evaluate(() => location.pathname.endsWith("/") && !/[a-z]-[a-z]+\/$/.test(location.pathname.split("/").slice(-2, -1)[0] || "")));
 
+  // 3b) A second header click after the address has changed must still resolve to the right page (regression: relative
+  // links used to resolve against the new folder and 404).
+  await page.goto(BASE, { waitUntil: "load" });
+  await page.click(".nav a[href$='merge-pdf/']");
+  await page.waitForSelector("#tool-merge[data-active]", { timeout: 5000 });
+  await page.click(".nav a[href$='sign-pdf/']");
+  await page.waitForSelector("#tool-sign[data-active]", { timeout: 5000 });
+  const p2 = await page.evaluate(() => location.pathname);
+  ok("second header click after navigating lands on the right page", p2.endsWith("/sign-pdf/") && !p2.includes("merge-pdf"), p2);
+  ok("nav highlight follows in-app navigation", (await page.$$eval(".nav a[data-active]", (a) => a.map((x) => x.textContent))).join() === "Sign");
+  await page.goto(BASE + "merge-pdf/", { waitUntil: "load" });
+  await page.click(".nav a[href$='about/']");
+  await page.waitForSelector("#tool-about[data-active]", { timeout: 5000 });
+  ok("header click from a directly-loaded tool page works too", (await page.evaluate(() => location.pathname)).endsWith("/about/"));
+
   // 4) Share URL and nav highlight use the real URL.
   await page.goto(BASE + "compress-pdf/", { waitUntil: "domcontentloaded" });
   await page.waitForSelector("#tool-compress[data-active]");
