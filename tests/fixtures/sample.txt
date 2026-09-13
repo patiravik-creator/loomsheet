@@ -1,0 +1,7 @@
+Plain text fixture.
+Second line of text.
+Third line for wrapping tests, Plain text fixture.
+Second line of text.
+Third line for wrapping tests, Plain text fixture.
+Second line of text.
+Third line for wrapping tests, 

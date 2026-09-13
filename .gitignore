@@ -1,0 +1,10 @@
+# test artifacts
+tests/node_modules/
+tests/results.json
+tests/server.log
+tests/playwright-report/
+
+# backend build output
+backend/target/
+
+.DS_Store
