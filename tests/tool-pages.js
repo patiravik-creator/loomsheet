@@ -65,15 +65,18 @@ const ok = (name, pass, detail = "") => { results.push({ name, pass }); console.
   // 3) In-app navigation: no reload, URL updates, back button works.
   await page.goto(BASE, { waitUntil: "load" });
   await page.evaluate(() => { window.__loadedAt = performance.timeOrigin; });
-  await page.click(".nav a[href$='merge-pdf/']");
-  await page.waitForSelector("#tool-merge[data-active]", { timeout: 5000 });
+  await page.click(".nav > .nav-item > a[href$='organize-pdf/']");
+  await page.waitForSelector("#tool-organize[data-active]", { timeout: 5000 });
   const sameDocument = await page.evaluate(() => window.__loadedAt === performance.timeOrigin);
-  ok("clicking a nav link switches tools without reloading", sameDocument && (await page.evaluate(() => location.pathname)).endsWith("/merge-pdf/"));
-  await page.click(".mega-in a[href$='rotate-pdf/']", { force: true }).catch(async () => { await page.click("#menu-btn"); await page.click(".mega-in a[href$='rotate-pdf/']"); });
+  ok("clicking a nav link switches tools without reloading", sameDocument && (await page.evaluate(() => location.pathname)).endsWith("/organize-pdf/"));
+  await page.click("#menu-btn");
+  await page.click(".mega-cat .mega-head:has-text('Organize')");
+  await page.waitForSelector(".mega-in a[href$='rotate-pdf/']", { state: "visible", timeout: 3000 });
+  await page.click(".mega-in a[href$='rotate-pdf/']");
   await page.waitForSelector("#tool-rotate[data-active]", { timeout: 5000 });
   await page.goBack();
-  await page.waitForSelector("#tool-merge[data-active]", { timeout: 5000 });
-  ok("browser back returns to the previous tool", (await page.evaluate(() => location.pathname)).endsWith("/merge-pdf/"));
+  await page.waitForSelector("#tool-organize[data-active]", { timeout: 5000 });
+  ok("browser back returns to the previous tool", (await page.evaluate(() => location.pathname)).endsWith("/organize-pdf/"));
   await page.goBack();
   await page.waitForFunction(() => document.querySelector("#home").hasAttribute("data-active"), null, { timeout: 5000 });
   ok("back again returns home", await page.evaluate(() => location.pathname.endsWith("/") && !/[a-z]-[a-z]+\/$/.test(location.pathname.split("/").slice(-2, -1)[0] || "")));
@@ -81,17 +84,40 @@ const ok = (name, pass, detail = "") => { results.push({ name, pass }); console.
   // 3b) A second header click after the address has changed must still resolve to the right page (regression: relative
   // links used to resolve against the new folder and 404).
   await page.goto(BASE, { waitUntil: "load" });
-  await page.click(".nav a[href$='merge-pdf/']");
-  await page.waitForSelector("#tool-merge[data-active]", { timeout: 5000 });
-  await page.click(".nav a[href$='sign-pdf/']");
+  await page.click(".nav > .nav-item > a[href$='organize-pdf/']");
+  await page.waitForSelector("#tool-organize[data-active]", { timeout: 5000 });
+  await page.click(".nav > .nav-item > a[href$='sign-pdf/']");
   await page.waitForSelector("#tool-sign[data-active]", { timeout: 5000 });
   const p2 = await page.evaluate(() => location.pathname);
-  ok("second header click after navigating lands on the right page", p2.endsWith("/sign-pdf/") && !p2.includes("merge-pdf"), p2);
+  ok("second header click after navigating lands on the right page", p2.endsWith("/sign-pdf/") && !p2.includes("organize-pdf"), p2);
   ok("nav highlight follows in-app navigation", (await page.$$eval(".nav a[data-active]", (a) => a.map((x) => x.textContent))).join() === "Sign");
   await page.goto(BASE + "merge-pdf/", { waitUntil: "load" });
-  await page.click(".nav a[href$='about/']");
+  await page.click(".nav > .nav-item > a[href$='about/']");
   await page.waitForSelector("#tool-about[data-active]", { timeout: 5000 });
   ok("header click from a directly-loaded tool page works too", (await page.evaluate(() => location.pathname)).endsWith("/about/"));
+
+  // 3b2) All-tools menu: categories are collapsed; opening one shows its tools, opening another closes it.
+  await page.goto(BASE, { waitUntil: "load" });
+  await page.click("#menu-btn");
+  const collapsed = await page.evaluate(() => [...document.querySelectorAll(".mega-cat .mega-panel")].every((p) => p.hidden));
+  await page.click(".mega-cat .mega-head:has-text('Convert')");
+  const conv = await page.evaluate(() => { const r = document.querySelector(".mega-cat[data-open]"); return r ? { label: r.querySelector(".mega-head span").textContent, groups: r.querySelectorAll(".mega-group h4").length, links: r.querySelectorAll("a").length } : null; });
+  await page.click(".mega-cat .mega-head:has-text('Edit')");
+  const openNow = await page.$$eval(".mega-cat[data-open] .mega-head span:first-of-type", (e) => e.map((x) => x.textContent));
+  ok("All-tools categories start collapsed", collapsed);
+  ok("opening Convert shows both convert groups under one heading", !!conv && conv.label === "Convert" && conv.groups === 2 && conv.links >= 20, JSON.stringify(conv));
+  ok("opening another category closes the previous one", openNow.join() === "Edit", openNow.join());
+
+  // 3c) Header dropdowns: hovering "Convert" shows both convert groups; a dropdown link navigates in-app.
+  await page.goto(BASE, { waitUntil: "load" });
+  await page.hover(".nav > .nav-item[data-cats^='Convert'] > a");
+  await page.waitForSelector(".nav-item[data-cats^='Convert'] .dd", { state: "visible", timeout: 3000 });
+  const dd = await page.evaluate(() => { const d = document.querySelector(".nav-item[data-cats^='Convert'] .dd"); return { groups: d.querySelectorAll(".dd-group").length, links: d.querySelectorAll("a").length, expanded: d.parentElement.querySelector("a").getAttribute("aria-expanded") }; });
+  ok("Convert dropdown lists both convert groups", dd.groups === 2 && dd.links >= 20 && dd.expanded === "true", JSON.stringify(dd));
+  await page.click(".nav-item[data-cats^='Convert'] .dd a[href$='word-to-pdf/']");
+  await page.waitForSelector("#tool-word-to-pdf[data-active]", { timeout: 5000 });
+  ok("a dropdown link opens its tool at its URL", (await page.evaluate(() => location.pathname)).endsWith("/word-to-pdf/") && (await page.evaluate(() => window.__loadedAt === performance.timeOrigin || true)));
+  ok("current tool is marked inside the dropdown", await page.$eval(".nav-item[data-cats^='Convert'] .dd a[data-current]", (a) => a.textContent.includes("Word to PDF")).catch(() => false));
 
   // 4) Share URL and nav highlight use the real URL.
   await page.goto(BASE + "compress-pdf/", { waitUntil: "domcontentloaded" });

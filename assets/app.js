@@ -256,8 +256,20 @@ const reg = t => { t.hidden = HIDDEN.has(t.id); TOOLS.push(t); };
 const usable = t => !!t && !t.na && !t.hidden;
 const built = {};
 // Light up the top-nav link for the section the current tool belongs to (each link points at one representative tool).
+// Header dropdowns: each nav item lists the tools of its category (or categories, "|"-separated in data-cats).
+function buildNav(){
+  $$(".nav .nav-item[data-cats]").forEach(item=>{
+    $(".dd",item)?.remove();
+    const groups=item.dataset.cats.split("|").map(c=>({cat:c,tools:TOOLS.filter(t=>t.cat===c && usable(t))})).filter(g=>g.tools.length);
+    if(!groups.length) return;
+    const html=groups.map(g=>`<div class="dd-group">${groups.length>1?`<h5>${esc(g.cat)}</h5>`:""}${g.tools.map(t=>`<a href="${toolUrl(t)}">${icon(t)}<span>${esc(t.name)}</span></a>`).join("")}</div>`).join("");
+    item.insertAdjacentHTML("beforeend",`<div class="dd" role="menu">${html}</div>`);
+    const a=$(":scope > a",item); a.setAttribute("aria-haspopup","true"); a.setAttribute("aria-expanded","false");
+  });
+}
 function markNav(t){
-  $$(".nav a").forEach(a=>{ const r=routeFor(a.href); const target=r?TOOLS.find(x=>x.id===r):null; const on=!!t && !!target && (target.id===t.id || target.cat===t.cat); a.toggleAttribute("data-active",on); if(on) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
+  $$(".nav .dd a").forEach(a=>a.toggleAttribute("data-current", !!t && routeFor(a.href)===t.id));
+  $$(".nav > .nav-item > a").forEach(a=>{ const r=routeFor(a.href); const target=r?TOOLS.find(x=>x.id===r):null; const on=!!t && !!target && (target.id===t.id || target.cat===t.cat); a.toggleAttribute("data-active",on); if(on) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current"); });
 }
 function showTool(id){
   $$(".tool").forEach(t=>t.removeAttribute("data-active"));
@@ -279,13 +291,18 @@ function showTool(id){
 const cardHtml = t => t.na ? `<div class="card na" title="${esc(t.na)}">${icon(t)}<div><b>${t.name}</b><span>${t.na}</span></div></div>` : `<a class="card" href="${toolUrl(t)}" style="--cc:${CAT_COLOR[t.cat]}">${icon(t)}<div><b>${t.name}</b><span>${t.desc}</span></div><button class="fav" data-fav="${t.id}" ${isFav(t.id)?"data-on":""} title="${isFav(t.id)?"Remove from favorites":"Add to favorites"}" aria-label="Favorite">${isFav(t.id)?"★":"☆"}</button></a>`;
 function buildHome(filter=""){
   const g=$("#home-grid"), m=$("#mega-in"); g.innerHTML=""; m.innerHTML=""; const f=filter.trim().toLowerCase(); let any=false;
-  // "All tools" menu: pack categories into columns, each new category going to the shortest column so far, so short
-  // categories stack under each other and the menu stays one band instead of a grid with an empty row.
-  const w=m.clientWidth||document.documentElement.clientWidth, ncols=w>=980?5:w>=780?4:w>=560?3:2;
-  const cols=Array.from({length:ncols},()=>({h:0,el:el("div",{class:"mega-col"})})); cols.forEach(c=>m.appendChild(c.el));
+  // "All tools" menu: one collapsible row per category (the two Convert categories share a row). Click a row to reveal its tools.
+  const MEGA=[["Compress",["Compress"]],["Convert",["Convert from PDF","Convert to PDF"]],["Organize",["Organize"]],["Edit",["Edit"]],["Fill & Sign",["Fill & Sign"]],["Protect",["Protect"]],["Scan",["Scan"]]];
+  for(const [label,cats] of MEGA){
+    const groups=cats.map(c=>({cat:c,tools:TOOLS.filter(t=>t.cat===c && usable(t))})).filter(g=>g.tools.length); if(!groups.length) continue;
+    const n=groups.reduce((a,g)=>a+g.tools.length,0), color=CAT_COLOR[cats[0]];
+    const row=el("div",{class:"mega-cat"},`<button class="mega-head" type="button" aria-expanded="false"><i class="dot" style="background:${color}"></i><span>${esc(label)}</span><span class="count">${n}</span><i class="chev"></i></button>
+      <div class="mega-panel" hidden>${groups.map(g=>`<div class="mega-group">${groups.length>1?`<h4>${esc(g.cat)}</h4>`:""}${g.tools.map(t=>`<a href="${toolUrl(t)}">${icon(t)}${esc(t.name)}</a>`).join("")}</div>`).join("")}</div>`);
+    $(".mega-head",row).onclick=()=>{ const open=row.hasAttribute("data-open"); $$(".mega-cat[data-open]",m).forEach(r=>{ r.removeAttribute("data-open"); $(".mega-panel",r).hidden=true; $(".mega-head",r).setAttribute("aria-expanded","false"); }); if(!open){ row.setAttribute("data-open",""); $(".mega-panel",row).hidden=false; $(".mega-head",row).setAttribute("aria-expanded","true"); } };
+    m.appendChild(row);
+  }
   for(const c of CATS){
     let ts = TOOLS.filter(t=>t.cat===c && !t.hidden); if(!ts.length) continue;
-    const live=ts.filter(t=>!t.na); if(live.length){ const col=cols.reduce((a,b)=>b.h<a.h?b:a); col.el.appendChild(el("div",{},`<h4>${c}</h4>${live.map(t=>`<a href="${toolUrl(t)}">${icon(t)}${t.name}</a>`).join("")}`)); col.h+=live.length+1.6; }
     if(f) ts=ts.filter(t=>(t.name+" "+(t.desc||"")+" "+c).toLowerCase().includes(f)); if(!ts.length) continue; any=true;
     g.appendChild(el("div",{class:"cat"},`<h3><i style="background:${CAT_COLOR[c]}"></i>${c}</h3><div class="grid">${ts.map(cardHtml).join("")}</div>`));
   }
@@ -311,8 +328,13 @@ if(matchMedia("(hover:hover) and (pointer:fine)").matches){
   bar.addEventListener("mouseleave", () => { clearTimeout(openT); closeT=setTimeout(()=>setMega(false),220); });
   bar.addEventListener("mouseenter", () => clearTimeout(closeT));
 }
-// Re-pack the "All tools" menu when the width changes enough to alter its column count.
-{ let last=0, t; window.addEventListener("resize", () => { clearTimeout(t); t=setTimeout(()=>{ const w=document.documentElement.clientWidth, n=w>=980?5:w>=780?4:w>=560?3:2; if(n!==last){ last=n; buildHome($("#tool-search")?.value||""); } },150); }); last=(()=>{ const w=document.documentElement.clientWidth; return w>=980?5:w>=780?4:w>=560?3:2; })(); }
+// Dropdown open state (hover is handled in CSS; this keeps aria-expanded honest and lets Escape close a focused menu).
+$$(".nav .nav-item[data-cats]").forEach(item=>{
+  const a=$(":scope > a",item), set=o=>a.setAttribute("aria-expanded",o);
+  item.addEventListener("mouseenter",()=>set(true)); item.addEventListener("mouseleave",()=>set(false));
+  item.addEventListener("focusin",()=>set(true)); item.addEventListener("focusout",e=>{ if(!item.contains(e.relatedTarget)) set(false); });
+  item.addEventListener("keydown",e=>{ if(e.key==="Escape"){ set(false); a.blur(); } });
+});
 // Give the sticky bar a shadow once the page is scrolled under it.
 { const bar=$(".bar"); const onScroll=()=>bar.toggleAttribute("data-scrolled",window.scrollY>8); window.addEventListener("scroll",onScroll,{passive:true}); onScroll(); }
 /* ---- routing ----
@@ -1098,4 +1120,4 @@ reg({ id:"about", cat:"About", name:"About", desc:"What Loomsheet provides.", bu
 $$("a[href]").forEach(a=>{ if(a.getAttribute("href")==="#") return; const r=routeFor(a.href); if(r===null) return; const t=r&&TOOLS.find(x=>x.id===r); a.setAttribute("href", t?toolUrl(t):ROOT); });
 // Generated tool pages carry a static copy of the tool's info for search engines; the app renders its own, so drop the static one.
 $$("[data-static-info]").forEach(e=>e.remove());
-buildHome(); showTool(currentRoute());
+buildNav(); buildHome(); showTool(currentRoute());

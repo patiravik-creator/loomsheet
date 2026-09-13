@@ -49,22 +49,45 @@
   .nav a:hover::after,.nav a:focus-visible::after{transform:scaleX(1)}
   .nav a[data-active]{color:var(--ink);font-weight:600}
   .nav a[data-active]::after{transform:scaleX(1)}
-  .nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+  .nav{display:flex;gap:2px;scrollbar-width:none}
   .nav::-webkit-scrollbar{display:none}
+  .nav-item{position:relative}
+  .nav-item[data-cats]>a{padding-right:22px}
+  .nav-item[data-cats]>a::before{content:"";position:absolute;right:9px;top:50%;width:6px;height:6px;border-right:1.6px solid currentColor;border-bottom:1.6px solid currentColor;transform:translateY(-70%) rotate(45deg);opacity:.55;transition:transform .2s,opacity .2s}
+  .nav-item:hover>a::before,.nav-item:focus-within>a::before{transform:translateY(-30%) rotate(-135deg);opacity:1}
+  .dd{position:absolute;left:0;top:calc(100% + 6px);min-width:230px;display:none;background:var(--sheet);border:1px solid var(--rule);border-radius:10px;box-shadow:0 14px 34px var(--shadow);padding:8px;z-index:30;animation:mega-in .16s ease-out}
+  .dd::before{content:"";position:absolute;left:0;right:0;top:-8px;height:8px}
+  .nav-item:hover>.dd,.nav-item:focus-within>.dd{display:flex;gap:6px}
+  .dd-group{min-width:210px}
+  .dd h5{margin:6px 10px 4px;font-size:12px;font-weight:600;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em}
+  .dd a{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:7px;color:var(--ink);text-decoration:none;font-size:14.5px;white-space:nowrap;transition:background-color .12s,color .12s}
+  .dd a:hover,.dd a:focus-visible{background:var(--paper);color:var(--accent)}
+  .dd a[data-current]{background:color-mix(in srgb,var(--accent) 12%,var(--sheet));color:var(--accent);font-weight:600}
+  .dd .ic{width:24px;height:24px;border-radius:6px}.dd .ic svg{width:14px;height:14px;stroke-width:2.2}
   .menu-btn{background:var(--paper);border:1px solid var(--rule);border-radius:4px;padding:7px 12px;cursor:pointer;color:var(--ink);white-space:nowrap;transition:border-color .18s,background-color .18s,box-shadow .18s}
   .menu-btn:hover{border-color:var(--ink-3)}
   .menu-btn[aria-expanded=true]{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
   .mega{display:none;position:absolute;left:0;right:0;top:56px;background:var(--sheet);border-bottom:1px solid var(--rule);box-shadow:0 12px 30px var(--shadow);max-height:calc(100vh - 56px);overflow:auto}
   .mega[data-open]{display:block;animation:mega-in .18s ease-out}
   @keyframes mega-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
-  /* Categories are packed into columns by app.js (shortest column first) so the menu is one band. */
-  .mega-in{max-width:1100px;margin:0 auto;padding:24px;display:flex;gap:18px;align-items:flex-start}
-  .mega-col{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:20px}
-  .mega h4{margin:0 0 8px;font-size:13px;font-weight:600;color:var(--ink-3)}
-  .mega a{display:flex;align-items:center;gap:8px;color:var(--ink);text-decoration:none;padding:4px 0;font-size:15px;transition:color .15s,transform .15s}
-  .mega a:hover,.mega a:focus-visible{color:var(--accent);transform:translateX(3px)}
-  .mega .ic{width:22px;height:22px;border-radius:6px;transition:transform .15s}.mega .ic svg{width:13px;height:13px;stroke-width:2.2}
-  .mega a:hover .ic{transform:scale(1.12)}
+  /* One collapsible row per category; click to reveal its tools (built in app.js). */
+  .mega-in{max-width:1100px;margin:0 auto;padding:10px 24px 16px}
+  .mega-cat{border-bottom:1px solid var(--rule)}
+  .mega-cat:last-child{border-bottom:0}
+  .mega-head{width:100%;display:flex;align-items:center;gap:12px;padding:13px 6px;background:none;border:0;color:var(--ink);font:inherit;font-size:15px;font-weight:600;cursor:pointer;text-align:left;border-radius:6px;transition:background-color .15s}
+  .mega-head:hover{background:var(--paper)}
+  .mega-head .dot{width:10px;height:10px;border-radius:3px;flex:none}
+  .mega-head .count{color:var(--ink-3);font-weight:500;font-size:13px}
+  .mega-head .chev{margin-left:auto;width:8px;height:8px;border-right:1.8px solid var(--ink-3);border-bottom:1.8px solid var(--ink-3);transform:rotate(45deg) translateY(-2px);transition:transform .2s}
+  .mega-cat[data-open] .mega-head .chev{transform:rotate(-135deg) translateY(-2px)}
+  .mega-cat[data-open] .mega-head{color:var(--accent)}
+  .mega-panel{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:2px 18px;padding:2px 6px 14px 28px;animation:mega-in .16s ease-out}
+  .mega-panel[hidden]{display:none}
+  .mega-group{display:contents}
+  .mega h4{grid-column:1/-1;margin:10px 0 4px;font-size:12px;font-weight:600;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em}
+  .mega a{display:flex;align-items:center;gap:8px;color:var(--ink);text-decoration:none;padding:5px 6px;border-radius:6px;font-size:15px;transition:color .15s,background-color .15s}
+  .mega a:hover,.mega a:focus-visible{color:var(--accent);background:var(--paper)}
+  .mega .ic{width:22px;height:22px;border-radius:6px}.mega .ic svg{width:13px;height:13px;stroke-width:2.2}
 
   .wrap{max-width:1100px;margin:0 auto;padding:36px 24px 80px}
 
@@ -305,5 +328,5 @@
   .progress i{display:block;height:100%;width:0;background:var(--cc,var(--accent));transition:width .2s}
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:999px;font-size:14px;box-shadow:0 8px 24px var(--shadow);z-index:50;opacity:0;pointer-events:none;transition:opacity .2s}
   .toast[data-on]{opacity:1}
-  @media (max-width:640px){.wrap{padding:20px 14px 60px}.sheet{padding:20px}.bar-in{padding:0 14px;gap:4px}.brand span{display:none}.nav{display:flex}.foot-grid{grid-template-columns:1fr}.hero{padding:24px 18px}.hero h1{font-size:26px}}
+  @media (max-width:640px){.nav{overflow-x:auto}.nav-item[data-cats]>a{padding-right:10px}.nav-item[data-cats]>a::before,.dd{display:none!important}.wrap{padding:20px 14px 60px}.sheet{padding:20px}.bar-in{padding:0 14px;gap:4px}.brand span{display:none}.nav{display:flex}.foot-grid{grid-template-columns:1fr}.hero{padding:24px 18px}.hero h1{font-size:26px}}
   @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}

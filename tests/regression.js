@@ -237,6 +237,11 @@ async function runFileTool(page, { id, label, files, multi = false, configure, r
         await page.locator(`#tool-${id} .drop input[type=file]`).first().setInputFiles(FIX("sample.pdf"));
         await page.waitForSelector(`#tool-${id} [data-canvas]`, { timeout: 15000 });
         await page.waitForTimeout(1200);
+        // The preview is taller than the default viewport; the drag's start and end must both be on screen, so use a tall
+        // viewport for this step and scroll the overlay's top under the sticky bar.
+        await page.setViewportSize({ width: 1280, height: 1400 });
+        await page.locator(`#tool-${id} [data-overlay]`).evaluate((e) => { e.scrollIntoView({ block: "start" }); window.scrollBy(0, -80); });
+        await page.waitForTimeout(300);
         const box = await page.locator(`#tool-${id} [data-overlay]`).boundingBox();
         await page.mouse.move(box.x + 20, box.y + 20);
         await page.mouse.down();
@@ -251,6 +256,7 @@ async function runFileTool(page, { id, label, files, multi = false, configure, r
         record(id, "Crop PDF (drag region, save)", "pass", res.text, errs);
       });
     } catch (e) { record(id, "Crop PDF (drag region, save)", "fail", e.message, errs); }
+    await page.setViewportSize({ width: 1280, height: 720 });
   }
 
   // ---------------- EDITOR-FAMILY (edit / annotate / redact / sign) ----------------
