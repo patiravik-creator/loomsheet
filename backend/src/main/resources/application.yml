@@ -1,0 +1,17 @@
+server:
+  port: 8081
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+
+loomsheet:
+  cors:
+    # Comma-separated list of origins allowed to call this API from the
+    # browser. Update this once the Loomsheet site has its own domain
+    # (see the client-side repo's README for the current live URL).
+    allowed-origins: http://localhost:8080,https://patiravik-creator.github.io
+
+logging:
+  level:
+    com.loomsheet.backend: INFO

@@ -1,3 +1,3 @@
 User-agent: *
 Allow: /
-Sitemap: https://patiravik-creator.github.io/sheetSimple/sitemap.xml
+Sitemap: https://patiravik-creator.github.io/loomsheet/sitemap.xml

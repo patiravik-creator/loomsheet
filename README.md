@@ -2,7 +2,7 @@
 
 Every PDF tool, right in your browser. Compress, convert, organize, edit, sign, scan, and ask AI about PDFs — with no uploads. Files never leave the device.
 
-**Live site:** https://patiravik-creator.github.io/sheetSimple/
+**Live site:** https://patiravik-creator.github.io/loomsheet/
 
 ## Tools
 
@@ -18,22 +18,22 @@ Every PDF tool, right in your browser. Compress, convert, organize, edit, sign, 
 | AI | Assistant, Chat, Summarizer, Translate, Question generator |
 | Scan | Camera scanner |
 
-Tools shown greyed out on the home page (Protect, Request signatures, Share, PDF/A, HWP, Pages) need a server and are not implemented.
+Tools shown greyed out on the home page (Protect, Request signatures, Share, PDF/A, HWP, Pages) need a server. They are implemented by the Java service in [`backend/`](backend/) — see [Backend](#backend) below. The site itself never depends on it; those six tools simply stay greyed out until a backend is deployed and wired in.
 
 ## How it works
 
 Everything is static: one `index.html`, one stylesheet, one script. PDF work is done client-side with
 [pdf-lib](https://pdf-lib.js.org/), [pdf.js](https://mozilla.github.io/pdf.js/), [JSZip](https://stuk.github.io/jszip/),
 [mammoth](https://github.com/mwilliamson/mammoth.js), [SheetJS](https://sheetjs.com/) and [Tesseract.js](https://tesseract.projectnaptha.com/),
-all loaded from cdnjs. No build step, no backend.
+all loaded from cdnjs. No build step; the static site needs no backend at all.
 
 The AI tools call the Anthropic API directly from the browser. On a hosted site each visitor enters their own API key (kept in memory only). To let visitors use it without a key, put a small proxy in front of the API that holds your key server-side — never embed a key in this repo.
 
 ## Run locally
 
 ```bash
-git clone https://github.com/patiravik-creator/sheetsimple.git
-cd sheetsimple
+git clone https://github.com/patiravik-creator/loomsheet.git
+cd loomsheet
 python3 -m http.server 8080     # or: npx serve .
 ```
 Open http://localhost:8080. (Opening `index.html` directly also works, but the camera scanner needs http(s).)
@@ -42,7 +42,7 @@ Open http://localhost:8080. (Opening `index.html` directly also works, but the c
 
 1. Push this repo to GitHub.
 2. **Settings → Pages → Build and deployment**: Source = *Deploy from a branch*, Branch = `main`, folder = `/ (root)`. Save.
-3. The site is live at `https://patiravik-creator.github.io/sheetsimple/` within a minute or two.
+3. The site is live at `https://patiravik-creator.github.io/loomsheet/` within a minute or two.
 
 To use a custom domain, add it under **Settings → Pages → Custom domain** (this creates a `CNAME` file) and point your DNS at GitHub Pages.
 
@@ -70,9 +70,22 @@ robots.txt, sitemap.xml
 assets/styles.css    design tokens, light + dark themes
 assets/app.js        helpers, tool registry, routing, every tool
 assets/favicon.svg, icon-192.png, icon-512.png, og-image.png
+backend/             Java 21 / Spring Boot service for the six server-side tools (own README)
 ```
 
 Each tool is registered in `app.js` with `reg({ id, cat, name, desc, build(root) })`. To add one, register a new entry, give it an icon in the `ICON` map, and it appears on the home page, the menu, and at `#your-id`.
+
+## Backend
+
+The six tools that can't run in a browser (Protect, PDF/A, HWP → PDF, Pages → PDF, Request Signatures, Share) live in [`backend/`](backend/) as a separate Java 21 / Spring Boot service with its own `pom.xml`, tests, and [README](backend/README.md). GitHub Pages serves this repo as static files and ignores it. To build and test:
+
+```bash
+cd backend
+mvn test
+mvn spring-boot:run     # default port 8081
+```
+
+Set `loomsheet.cors.allowed-origins` in `backend/src/main/resources/application.yml` to the site's origin before deploying.
 
 ## Privacy
 
