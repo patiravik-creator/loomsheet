@@ -33,6 +33,15 @@ jobs:
       - name: Install Chromium for Playwright
         run: npx playwright install --with-deps chromium
 
+      - name: Cache Tesseract language data
+        uses: actions/cache@v4
+        with:
+          path: tests/vendor/tesseract/eng.traineddata.gz
+          key: tessdata-eng-4.0.0
+
+      - name: Prepare local Tesseract files for the OCR test
+        run: node prepare-tesseract.js
+
       - name: Serve the site
         run: |
           python3 -m http.server 8899 --bind 127.0.0.1 --directory .. > server.log 2>&1 &

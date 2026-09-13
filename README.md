@@ -95,6 +95,7 @@ It reads the tool list from the running app, writes one `index.html` per tool, r
 
 ```bash
 cd tests && npm install
+npm run prepare-tesseract      # once: local Tesseract files so the OCR test doesn't depend on CDNs
 npm run serve &                # serves the repo root on :8899
 npm test
 ```

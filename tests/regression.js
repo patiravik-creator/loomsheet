@@ -76,6 +76,32 @@ async function runFileTool(page, { id, label, files, multi = false, configure, r
   const page = await browser.newPage();
   page.setDefaultTimeout(20000);
 
+  // OCR: point Tesseract at the local copies assembled by prepare-tesseract.js (when present), so the test doesn't
+  // depend on third-party CDNs being reachable from a Web Worker on the CI runner. The site's own code is unchanged —
+  // this only wraps Tesseract.createWorker once the library has loaded.
+  const tessDir = path.join(__dirname, "vendor", "tesseract");
+  if (fs.existsSync(path.join(tessDir, "worker.min.js")) && fs.existsSync(path.join(tessDir, "eng.traineddata.gz"))) {
+    const local = BASE + "tests/vendor/tesseract/";
+    await page.addInitScript((local) => {
+      let lib;
+      Object.defineProperty(window, "Tesseract", {
+        configurable: true,
+        get() { return lib; },
+        set(v) {
+          lib = v;
+          if (v && typeof v.createWorker === "function" && !v.__localPaths) {
+            const orig = v.createWorker;
+            v.createWorker = (lang, oem, opts = {}, ...rest) =>
+              orig(lang, oem, { workerPath: local + "worker.min.js", corePath: local, langPath: local.replace(/\/$/, ""), ...opts }, ...rest);
+            v.__localPaths = true;
+          }
+        },
+      });
+    }, local);
+  } else {
+    console.log("(OCR will use the CDNs: run `node prepare-tesseract.js` for a self-contained OCR test)");
+  }
+
   // sanity: load home page
   await page.goto(BASE, { waitUntil: "domcontentloaded" });
   const title = await page.title();

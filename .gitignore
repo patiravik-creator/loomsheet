@@ -3,6 +3,7 @@ tests/node_modules/
 tests/results.json
 tests/server.log
 tests/playwright-report/
+tests/vendor/
 
 # backend build output
 backend/target/
